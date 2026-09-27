@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- PDF engine: a thin, AOT friendly wrapper over PDFium. No UI and no Windows APIs, so it is testable anywhere. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <RootNamespace>VisyaDocs.Core</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="VisyaDocs.Core.Tests" />
+  </ItemGroup>
+</Project>
