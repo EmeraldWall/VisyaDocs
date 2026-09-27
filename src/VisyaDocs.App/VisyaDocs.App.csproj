@@ -42,4 +42,12 @@
   </ItemGroup>
 
   <Import Project="..\..\build\Pdfium.targets" />
+
+  <!-- Native AOT still writes a PDB next to the exe; keep release folders free of symbols. -->
+  <Target Name="VisyaRemovePublishedSymbols" AfterTargets="Publish" Condition="'$(DebugType)' == 'none'">
+    <ItemGroup>
+      <_VisyaPublishedPdb Include="$(PublishDir)**\*.pdb" />
+    </ItemGroup>
+    <Delete Files="@(_VisyaPublishedPdb)" />
+  </Target>
 </Project>
