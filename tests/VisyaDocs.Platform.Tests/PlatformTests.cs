@@ -74,4 +74,39 @@ public class PlatformTests(ITestOutputHelper output)
             File.Delete(path);
         }
     }
+
+    [Fact]
+    public void PrintsPortraitAndLandscapePagesToMicrosoftPrintToPdf()
+    {
+        using var doc = PdfDocument.CreateEmpty();
+        var white = Enumerable.Repeat((byte)255, 20 * 20 * 4).ToArray();
+        doc.AppendImagePage(white, 20, 30);   // portrait
+        doc.AppendImagePage(white, 30, 20);   // landscape: must be turned to fill portrait paper
+        doc.AddText(0, 60, 600, "PRINTED PAGE ONE", new TextStyle(36));
+        doc.AddText(1, 60, 300, "PRINTED PAGE TWO", new TextStyle(36));
+
+        string file = Path.Combine(Path.GetTempPath(), $"visya-print-{Guid.NewGuid():N}.pdf");
+        try
+        {
+            if (!PrintService.PrintToPrinter(doc, "Microsoft Print to PDF", [0, 1], "VisyaDocs test", file))
+            {
+                output.WriteLine("\"Microsoft Print to PDF\" is not installed on this machine; skipping.");
+                return;
+            }
+            Assert.True(File.Exists(file), "The printer did not write the output file.");
+            using var printed = PdfDocument.Open(file);
+            Assert.Equal(2, printed.PageCount);
+            for (int p = 0; p < 2; p++)
+            {
+                var g = printed.GetGeometry(p);
+                Assert.True(g.ViewHeight > g.ViewWidth, "Printed sheets are portrait paper.");
+                byte[] pixels = printed.RenderPage(p, 200, (int)(200 * g.ViewHeight / g.ViewWidth));
+                Assert.Contains(pixels, b => b < 100);   // the text made it onto the sheet
+            }
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
 }

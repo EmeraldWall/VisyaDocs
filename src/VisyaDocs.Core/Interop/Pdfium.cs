@@ -93,6 +93,10 @@ internal static unsafe partial class Pdfium
     [LibraryImport(Lib)]
     public static partial void FPDF_RenderPageBitmap(nint bitmap, nint page, int startX, int startY, int sizeX, int sizeY, int rotate, int flags);
 
+    // Windows only: draws a page as vector output onto a GDI device context (used for printing).
+    [LibraryImport(Lib)]
+    public static partial int FPDF_RenderPage(nint hdc, nint page, int startX, int startY, int sizeX, int sizeY, int rotate, int flags);
+
     // Text extraction
     [LibraryImport(Lib)] public static partial nint FPDFText_LoadPage(nint page);
     [LibraryImport(Lib)] public static partial void FPDFText_ClosePage(nint textPage);

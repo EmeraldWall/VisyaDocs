@@ -10,6 +10,7 @@
     <x:String x:Key="IconOpen">&#xE8E5;</x:String>
     <x:String x:Key="IconSave">&#xE74E;</x:String>
     <x:String x:Key="IconSaveAs">&#xE792;</x:String>
+    <x:String x:Key="IconPrint">&#xE749;</x:String>
     <x:String x:Key="IconDocument">&#xE8A5;</x:String>
     <x:String x:Key="IconZoomIn">&#xE8A3;</x:String>
     <x:String x:Key="IconZoomOut">&#xE71F;</x:String>

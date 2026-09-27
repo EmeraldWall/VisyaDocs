@@ -12,6 +12,7 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 - Zoom: fit width, fit page, presets, Ctrl + mouse wheel, Ctrl + plus/minus
 - Page thumbnails, go to page, search with highlighted matches (Enter / Shift+Enter)
 - Select text (drag, double click for a word, Ctrl+A for the page) and copy
+- Print (Ctrl+P) with the standard Windows print dialog: printer, page range, current page, copies. Pages print as sharp vector output, landscape pages turn to fill the sheet, and comments and highlights are included
 
 **Edit**
 - **Edit text**: click existing text and change it in place. The original embedded font is kept when it can show the new text, otherwise the run is rebuilt with a matching standard font at the same position, size and color
@@ -96,7 +97,6 @@ build/                  PDFium download targets, icon export script
 - Text editing works on text runs as the PDF stores them. Some PDFs store one word or even one character per run, so an edit may cover a smaller piece than a whole line.
 - When the embedded font cannot show the new characters, the replacement uses Helvetica (or Arial for non Latin text), so the look can differ slightly from the original.
 - Text written into CJK scripts needs a font that covers them; Arial is used as the fallback.
-- No printing yet.
 
 ## License of dependencies
 
