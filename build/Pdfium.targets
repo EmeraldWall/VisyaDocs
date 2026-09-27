@@ -1,0 +1,43 @@
+<Project>
+  <!--
+    Downloads the pinned PDFium native library for the project's runtime identifier
+    and copies it next to the executable. Imported by the app and the test project
+    (the projects that own a runtime identifier), not by the class libraries.
+  -->
+  <PropertyGroup>
+    <_PdfiumRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</_PdfiumRid>
+    <!-- No runtime identifier (for example the test project): use the build machine's OS and CPU. -->
+    <_PdfiumHostArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant())</_PdfiumHostArch>
+    <_PdfiumRid Condition="'$(_PdfiumRid)' == '' And $([MSBuild]::IsOSPlatform('Windows'))">win-$(_PdfiumHostArch)</_PdfiumRid>
+    <_PdfiumRid Condition="'$(_PdfiumRid)' == '' And $([MSBuild]::IsOSPlatform('Linux'))">linux-$(_PdfiumHostArch)</_PdfiumRid>
+    <_PdfiumRid Condition="'$(_PdfiumRid)' == '' And $([MSBuild]::IsOSPlatform('OSX'))">osx-$(_PdfiumHostArch)</_PdfiumRid>
+    <_PdfiumArchive Condition="$(_PdfiumRid.StartsWith('win-'))">pdfium-$(_PdfiumRid)</_PdfiumArchive>
+    <_PdfiumArchive Condition="$(_PdfiumRid.StartsWith('linux-'))">pdfium-$(_PdfiumRid)</_PdfiumArchive>
+    <_PdfiumArchive Condition="$(_PdfiumRid.StartsWith('osx-'))">pdfium-mac-$(_PdfiumRid.Substring(4))</_PdfiumArchive>
+    <_PdfiumLibSubPath Condition="$(_PdfiumRid.StartsWith('win-'))">bin/pdfium.dll</_PdfiumLibSubPath>
+    <_PdfiumLibSubPath Condition="$(_PdfiumRid.StartsWith('linux-'))">lib/libpdfium.so</_PdfiumLibSubPath>
+    <_PdfiumLibSubPath Condition="$(_PdfiumRid.StartsWith('osx-'))">lib/libpdfium.dylib</_PdfiumLibSubPath>
+    <_PdfiumDir>$(MSBuildThisFileDirectory)../native/pdfium/$(PdfiumRelease.Replace('/', '-'))/$(_PdfiumRid)/</_PdfiumDir>
+    <_PdfiumLib>$(_PdfiumDir)$(_PdfiumLibSubPath)</_PdfiumLib>
+    <_PdfiumUrl>https://github.com/bblanchon/pdfium-binaries/releases/download/$(PdfiumRelease)/$(_PdfiumArchive).tgz</_PdfiumUrl>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(_PdfiumArchive)' != ''">
+    <None Include="$(_PdfiumLib)" Link="$([System.IO.Path]::GetFileName('$(_PdfiumLibSubPath)'))"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+  <Target Name="VisyaFetchPdfium" BeforeTargets="BeforeBuild;AssignTargetPaths"
+          Condition="'$(_PdfiumArchive)' != '' And !Exists('$(_PdfiumLib)')">
+    <Message Importance="high" Text="Downloading PDFium $(PdfiumRelease) for $(_PdfiumRid)" />
+    <MakeDir Directories="$(_PdfiumDir)" />
+    <DownloadFile SourceUrl="$(_PdfiumUrl)" DestinationFolder="$(_PdfiumDir)" DestinationFileName="pdfium.tgz" Retries="3" />
+    <Exec Command="tar -xzf pdfium.tgz" WorkingDirectory="$(_PdfiumDir)" />
+    <Delete Files="$(_PdfiumDir)pdfium.tgz" />
+    <Error Condition="!Exists('$(_PdfiumLib)')" Text="PDFium library not found after download: $(_PdfiumLib)" />
+  </Target>
+
+  <Target Name="VisyaWarnNoPdfium" BeforeTargets="BeforeBuild" Condition="'$(_PdfiumArchive)' == ''">
+    <Warning Text="No PDFium binary is mapped for runtime '$(_PdfiumRid)'." />
+  </Target>
+</Project>

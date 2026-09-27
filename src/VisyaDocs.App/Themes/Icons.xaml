@@ -1,0 +1,45 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      Command icons: glyphs from the icon font built into Windows (Segoe Fluent Icons on
+      Windows 11, Segoe MDL2 Assets on Windows 10), so they add nothing to the app size and
+      match the system. FontIcon picks the right font through SymbolThemeFontFamily.
+    -->
+    <x:String x:Key="IconOpen">&#xE8E5;</x:String>
+    <x:String x:Key="IconSave">&#xE74E;</x:String>
+    <x:String x:Key="IconSaveAs">&#xE792;</x:String>
+    <x:String x:Key="IconDocument">&#xE8A5;</x:String>
+    <x:String x:Key="IconZoomIn">&#xE8A3;</x:String>
+    <x:String x:Key="IconZoomOut">&#xE71F;</x:String>
+    <x:String x:Key="IconFitWidth">&#xE9A6;</x:String>
+    <x:String x:Key="IconSearch">&#xE721;</x:String>
+    <x:String x:Key="IconPrevious">&#xE70E;</x:String>
+    <x:String x:Key="IconNext">&#xE70D;</x:String>
+    <x:String x:Key="IconThumbnails">&#xE8A9;</x:String>
+    <x:String x:Key="IconRead">&#xE736;</x:String>
+    <x:String x:Key="IconSelect">&#xE8B3;</x:String>
+    <x:String x:Key="IconEditText">&#xE70F;</x:String>
+    <x:String x:Key="IconAddText">&#xE8D2;</x:String>
+    <x:String x:Key="IconComment">&#xE90A;</x:String>
+    <x:String x:Key="IconComments">&#xE8BD;</x:String>
+    <x:String x:Key="IconHighlight">&#xE7E6;</x:String>
+    <x:String x:Key="IconUndo">&#xE7A7;</x:String>
+    <x:String x:Key="IconRedo">&#xE7A6;</x:String>
+    <x:String x:Key="IconConvert">&#xE8AB;</x:String>
+    <x:String x:Key="IconOcr">&#xE8FE;</x:String>
+    <x:String x:Key="IconText">&#xE8E4;</x:String>
+    <x:String x:Key="IconWord">&#xE8A5;</x:String>
+    <x:String x:Key="IconImage">&#xE91B;</x:String>
+    <x:String x:Key="IconImagesToPdf">&#xEB9F;</x:String>
+    <x:String x:Key="IconMerge">&#xE8C8;</x:String>
+    <x:String x:Key="IconCopy">&#xE8C8;</x:String>
+    <x:String x:Key="IconDelete">&#xE74D;</x:String>
+    <x:String x:Key="IconClose">&#xE711;</x:String>
+    <x:String x:Key="IconSettings">&#xE713;</x:String>
+    <x:String x:Key="IconTheme">&#xE790;</x:String>
+    <x:String x:Key="IconRecent">&#xE81C;</x:String>
+    <x:String x:Key="IconAccept">&#xE8FB;</x:String>
+    <x:String x:Key="IconColor">&#xE790;</x:String>
+</ResourceDictionary>

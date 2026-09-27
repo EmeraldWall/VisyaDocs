@@ -1,0 +1,65 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install the English OCR language (best effort)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $cap = Get-WindowsCapability -Online | Where-Object Name -like 'Language.OCR~~~en-US*'
+          if ($cap -and $cap.State -ne 'Installed') { Add-WindowsCapability -Online -Name $cap.Name | Out-Null }
+          Get-WindowsCapability -Online | Where-Object Name -like 'Language.OCR*' | Format-Table Name, State
+
+      - name: Core tests
+        run: dotnet test tests/VisyaDocs.Core.Tests -c Release --logger "console;verbosity=normal"
+
+      - name: Windows platform tests (OCR, imaging)
+        run: dotnet test tests/VisyaDocs.Platform.Tests -c Release --logger "console;verbosity=normal"
+
+  app:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x64, ARM64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build (Debug)
+        run: dotnet build src/VisyaDocs.App -c Debug -p:Platform=${{ matrix.platform }}
+
+      - name: Publish (Release, Native AOT, self contained)
+        run: dotnet publish src/VisyaDocs.App -c Release -p:Platform=${{ matrix.platform }} -p:PublishProfile=win-${{ matrix.platform }}
+
+      - name: Report size
+        shell: pwsh
+        run: |
+          $rid = if ('${{ matrix.platform }}' -eq 'x64') { 'win-x64' } else { 'win-arm64' }
+          $dir = "artifacts/VisyaDocs-$rid"
+          $files = Get-ChildItem $dir -Recurse -File
+          $mb = [math]::Round((($files | Measure-Object Length -Sum).Sum) / 1MB, 1)
+          "Published folder: $mb MB in $($files.Count) files" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          $files | Sort-Object Length -Descending | Select-Object -First 12 Name, @{n='MB';e={[math]::Round($_.Length/1MB,2)}} | Format-Table
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VisyaDocs-${{ matrix.platform }}
+          path: artifacts/VisyaDocs-win-*/
+          if-no-files-found: error
