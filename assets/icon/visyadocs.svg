@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- VisyaDocs app icon: a document with a "V" mark and a lens for OCR and viewing. -->
+  <defs>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2B7FFF"/>
+      <stop offset="1" stop-color="#5B3FD9"/>
+    </linearGradient>
+    <linearGradient id="sheet" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E6ECF5"/>
+    </linearGradient>
+  </defs>
+  <path d="M58 16H158L210 68V220a16 16 0 0 1-16 16H58a16 16 0 0 1-16-16V32a16 16 0 0 1 16-16Z"
+        fill="url(#sheet)" stroke="#AEBBD0" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M158 16V56a12 12 0 0 0 12 12H210Z" fill="#C7D3E6" stroke="#AEBBD0" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M78 84L122 176L166 84" fill="none" stroke="url(#mark)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="188" cy="190" r="34" fill="#FFFFFF" stroke="url(#mark)" stroke-width="13"/>
+  <circle cx="188" cy="190" r="14" fill="#2B7FFF" opacity="0.25"/>
+  <path d="M213 215L238 240" stroke="#5B3FD9" stroke-width="18" stroke-linecap="round"/>
+</svg>

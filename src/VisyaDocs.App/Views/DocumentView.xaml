@@ -1,0 +1,355 @@
+<UserControl
+    x:Class="VisyaDocs.App.Views.DocumentView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:VisyaDocs.App.Views">
+
+    <Grid x:Name="Root" KeyboardAcceleratorPlacementMode="Hidden">
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Modifiers="Control" Key="S" Invoked="SaveAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control,Shift" Key="S" Invoked="SaveAsAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control" Key="F" Invoked="FindAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control" Key="Z" Invoked="UndoAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control" Key="Y" Invoked="RedoAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control" Key="C" Invoked="CopyAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control" Key="A" Invoked="SelectAllAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control" Key="Add" Invoked="ZoomInAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control" Key="Subtract" Invoked="ZoomOutAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control" Key="Number0" Invoked="FitWidthAccelerator_Invoked" />
+            <KeyboardAccelerator Key="Escape" Invoked="EscapeAccelerator_Invoked" />
+        </Grid.KeyboardAccelerators>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Grid Background="{ThemeResource VisyaToolbarBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}"
+              BorderThickness="0,0,0,1" Padding="6,4" ColumnSpacing="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <SelectorBar x:Name="ModeBar" SelectionChanged="ModeBar_SelectionChanged">
+                <SelectorBarItem x:Name="ReadModeItem" Text="Read" IsSelected="True">
+                    <SelectorBarItem.Icon><FontIcon Glyph="{StaticResource IconRead}" /></SelectorBarItem.Icon>
+                </SelectorBarItem>
+                <SelectorBarItem x:Name="EditModeItem" Text="Edit">
+                    <SelectorBarItem.Icon><FontIcon Glyph="{StaticResource IconEditText}" /></SelectorBarItem.Icon>
+                </SelectorBarItem>
+                <SelectorBarItem x:Name="ConvertModeItem" Text="Convert">
+                    <SelectorBarItem.Icon><FontIcon Glyph="{StaticResource IconConvert}" /></SelectorBarItem.Icon>
+                </SelectorBarItem>
+            </SelectorBar>
+
+            <ScrollViewer Grid.Column="1" HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Hidden"
+                          VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <Rectangle Style="{StaticResource ToolSeparatorStyle}" />
+                    <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Save (Ctrl+S)" Click="Save_Click">
+                        <FontIcon Glyph="{StaticResource IconSave}" FontSize="16" />
+                    </Button>
+                    <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Save as (Ctrl+Shift+S)" Click="SaveAs_Click">
+                        <FontIcon Glyph="{StaticResource IconSaveAs}" FontSize="16" />
+                    </Button>
+                    <ToggleButton x:Name="ThumbsToggle" Style="{StaticResource ToolToggleStyle}" ToolTipService.ToolTip="Page thumbnails"
+                                  Click="ThumbsToggle_Click">
+                        <FontIcon Glyph="{StaticResource IconThumbnails}" FontSize="16" />
+                    </ToggleButton>
+                    <Rectangle Style="{StaticResource ToolSeparatorStyle}" />
+                    <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Zoom out (Ctrl+minus)" Click="ZoomOut_Click">
+                        <FontIcon Glyph="{StaticResource IconZoomOut}" FontSize="16" />
+                    </Button>
+                    <ComboBox x:Name="ZoomBox" Width="112" VerticalAlignment="Center" SelectionChanged="ZoomBox_SelectionChanged"
+                              ToolTipService.ToolTip="Zoom">
+                        <x:String>Fit width</x:String>
+                        <x:String>Fit page</x:String>
+                        <x:String>50%</x:String>
+                        <x:String>75%</x:String>
+                        <x:String>100%</x:String>
+                        <x:String>125%</x:String>
+                        <x:String>150%</x:String>
+                        <x:String>200%</x:String>
+                        <x:String>300%</x:String>
+                        <x:String>400%</x:String>
+                    </ComboBox>
+                    <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Zoom in (Ctrl+plus)" Click="ZoomIn_Click">
+                        <FontIcon Glyph="{StaticResource IconZoomIn}" FontSize="16" />
+                    </Button>
+                    <Rectangle Style="{StaticResource ToolSeparatorStyle}" />
+                    <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Previous page" Click="PrevPage_Click">
+                        <FontIcon Glyph="{StaticResource IconPrevious}" FontSize="16" />
+                    </Button>
+                    <TextBox x:Name="PageBox" Width="56" VerticalAlignment="Center" TextAlignment="Center"
+                             KeyDown="PageBox_KeyDown" ToolTipService.ToolTip="Go to page" />
+                    <TextBlock x:Name="PageCountText" VerticalAlignment="Center" Margin="4,0" />
+                    <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Next page" Click="NextPage_Click">
+                        <FontIcon Glyph="{StaticResource IconNext}" FontSize="16" />
+                    </Button>
+
+                    <!-- Edit mode -->
+                    <StackPanel x:Name="EditTools" Orientation="Horizontal" Spacing="2" Visibility="Collapsed">
+                        <Rectangle Style="{StaticResource ToolSeparatorStyle}" />
+                        <ToggleButton x:Name="SelectTool" Style="{StaticResource ToolToggleStyle}" Tag="Select" Click="Tool_Click"
+                                      ToolTipService.ToolTip="Select and copy text">
+                            <FontIcon Glyph="{StaticResource IconSelect}" FontSize="16" />
+                        </ToggleButton>
+                        <ToggleButton x:Name="EditTextTool" Style="{StaticResource ToolToggleStyle}" Tag="EditText" Click="Tool_Click"
+                                      ToolTipService.ToolTip="Edit text: click existing text to change it">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconEditText}" FontSize="16" />
+                                <TextBlock Text="Edit text" />
+                            </StackPanel>
+                        </ToggleButton>
+                        <ToggleButton x:Name="AddTextTool" Style="{StaticResource ToolToggleStyle}" Tag="AddText" Click="Tool_Click"
+                                      ToolTipService.ToolTip="Add text: click where the text should go">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconAddText}" FontSize="16" />
+                                <TextBlock Text="Add text" />
+                            </StackPanel>
+                        </ToggleButton>
+                        <ToggleButton x:Name="CommentTool" Style="{StaticResource ToolToggleStyle}" Tag="Comment" Click="Tool_Click"
+                                      ToolTipService.ToolTip="Add comment: click where the note should go">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconComment}" FontSize="16" />
+                                <TextBlock Text="Comment" />
+                            </StackPanel>
+                        </ToggleButton>
+                        <ToggleButton x:Name="HighlightTool" Style="{StaticResource ToolToggleStyle}" Tag="Highlight" Click="Tool_Click"
+                                      ToolTipService.ToolTip="Highlight: drag across text">
+                            <FontIcon Glyph="{StaticResource IconHighlight}" FontSize="16" />
+                        </ToggleButton>
+                        <ComboBox x:Name="FontSizeBox" Width="76" VerticalAlignment="Center" ToolTipService.ToolTip="Font size for new text"
+                                  SelectedIndex="3">
+                            <x:String>8</x:String>
+                            <x:String>10</x:String>
+                            <x:String>11</x:String>
+                            <x:String>12</x:String>
+                            <x:String>14</x:String>
+                            <x:String>16</x:String>
+                            <x:String>18</x:String>
+                            <x:String>24</x:String>
+                            <x:String>32</x:String>
+                            <x:String>48</x:String>
+                        </ComboBox>
+                        <DropDownButton x:Name="ColorButton" ToolTipService.ToolTip="Text color" Background="Transparent" BorderThickness="0" Height="34">
+                            <FontIcon x:Name="ColorIcon" Glyph="&#xE8D2;" FontSize="16" />
+                            <DropDownButton.Flyout>
+                                <MenuFlyout x:Name="ColorMenu" Placement="Bottom" />
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
+                        <Rectangle Style="{StaticResource ToolSeparatorStyle}" />
+                        <Button x:Name="UndoButton" Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Undo (Ctrl+Z)" Click="Undo_Click">
+                            <FontIcon Glyph="{StaticResource IconUndo}" FontSize="16" />
+                        </Button>
+                        <Button x:Name="RedoButton" Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Redo (Ctrl+Y)" Click="Redo_Click">
+                            <FontIcon Glyph="{StaticResource IconRedo}" FontSize="16" />
+                        </Button>
+                        <ToggleButton x:Name="CommentsToggle" Style="{StaticResource ToolToggleStyle}" ToolTipService.ToolTip="Comments pane"
+                                      Click="CommentsToggle_Click">
+                            <FontIcon Glyph="{StaticResource IconComments}" FontSize="16" />
+                        </ToggleButton>
+                    </StackPanel>
+
+                    <!-- Convert mode -->
+                    <StackPanel x:Name="ConvertTools" Orientation="Horizontal" Spacing="2" Visibility="Collapsed">
+                        <Rectangle Style="{StaticResource ToolSeparatorStyle}" />
+                        <Button Style="{StaticResource ToolButtonStyle}" Click="MakeSearchable_Click"
+                                ToolTipService.ToolTip="Recognize scanned pages and add a searchable text layer">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconOcr}" FontSize="16" />
+                                <TextBlock Text="Make searchable (OCR)" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource ToolButtonStyle}" Click="ExtractText_Click"
+                                ToolTipService.ToolTip="Show all text, using OCR for scanned pages">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconText}" FontSize="16" />
+                                <TextBlock Text="Extract text" />
+                            </StackPanel>
+                        </Button>
+                        <Rectangle Style="{StaticResource ToolSeparatorStyle}" />
+                        <Button Style="{StaticResource ToolButtonStyle}" Click="ExportWord_Click" ToolTipService.ToolTip="Export to Word (.docx)">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconWord}" FontSize="16" />
+                                <TextBlock Text="Word" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource ToolButtonStyle}" Click="ExportText_Click" ToolTipService.ToolTip="Export to plain text (.txt)">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconText}" FontSize="16" />
+                                <TextBlock Text="Text" />
+                            </StackPanel>
+                        </Button>
+                        <DropDownButton ToolTipService.ToolTip="Export pages as images" Background="Transparent" BorderThickness="0" Height="34">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconImage}" FontSize="16" />
+                                <TextBlock Text="Images" />
+                            </StackPanel>
+                            <DropDownButton.Flyout>
+                                <MenuFlyout Placement="Bottom">
+                                    <MenuFlyoutItem Text="PNG images" Tag="Png" Click="ExportImages_Click" />
+                                    <MenuFlyoutItem Text="JPEG images" Tag="Jpeg" Click="ExportImages_Click" />
+                                </MenuFlyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
+                        <Rectangle Style="{StaticResource ToolSeparatorStyle}" />
+                        <Button Style="{StaticResource ToolButtonStyle}" Click="AppendPdf_Click" ToolTipService.ToolTip="Append the pages of other PDFs">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconMerge}" FontSize="16" />
+                                <TextBlock Text="Append PDF" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource ToolButtonStyle}" Click="AppendImages_Click" ToolTipService.ToolTip="Append images as new pages">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconImagesToPdf}" FontSize="16" />
+                                <TextBlock Text="Append images" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Search -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                <TextBox x:Name="SearchBox" Width="190" PlaceholderText="Search (Ctrl+F)" KeyDown="SearchBox_KeyDown" />
+                <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Previous match" Click="SearchPrev_Click">
+                    <FontIcon Glyph="{StaticResource IconPrevious}" FontSize="14" />
+                </Button>
+                <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Next match" Click="SearchNext_Click">
+                    <FontIcon Glyph="{StaticResource IconNext}" FontSize="14" />
+                </Button>
+                <TextBlock x:Name="SearchStatus" VerticalAlignment="Center" MinWidth="56" Opacity="0.75" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Notifications and progress -->
+        <StackPanel Grid.Row="1">
+            <InfoBar x:Name="ScanBar" Severity="Informational" IsOpen="False" Title="Scanned document"
+                     Message="This document has pages without text. Run OCR to make it searchable and copyable.">
+                <InfoBar.ActionButton>
+                    <Button Content="Make searchable" Click="MakeSearchable_Click" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+            <InfoBar x:Name="MessageBar" IsOpen="False" />
+            <Grid x:Name="ProgressPanel" Visibility="Collapsed" Padding="12,6" ColumnSpacing="12" Background="{ThemeResource VisyaPaneBrush}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="ProgressText" VerticalAlignment="Center" />
+                <ProgressBar x:Name="Progress" Grid.Column="1" Maximum="1" VerticalAlignment="Center" />
+                <Button Grid.Column="2" Content="Cancel" Click="CancelOperation_Click" />
+            </Grid>
+        </StackPanel>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <ListView x:Name="ThumbList" Width="176" Visibility="Collapsed" SelectionMode="Single" Padding="0,8"
+                      Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="0,0,1,0"
+                      ContainerContentChanging="ThumbList_ContainerContentChanging" ItemClick="ThumbList_ItemClick" IsItemClickEnabled="True">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="local:ThumbnailItem">
+                        <StackPanel Padding="0,6" Spacing="4" HorizontalAlignment="Center">
+                            <Border Background="White" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1"
+                                    Width="{x:Bind Width}" Height="{x:Bind Height}">
+                                <Image Source="{x:Bind Image, Mode=OneWay}" Stretch="Uniform" />
+                            </Border>
+                            <TextBlock Text="{x:Bind Label}" HorizontalAlignment="Center" FontSize="12" Opacity="0.75" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <ScrollViewer x:Name="Scroller" Grid.Column="1" Background="{ThemeResource VisyaCanvasBrush}"
+                          HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto" ZoomMode="Disabled"
+                          ViewChanged="Scroller_ViewChanged" SizeChanged="Scroller_SizeChanged" IsTabStop="True">
+                <StackPanel x:Name="PagesPanel" Spacing="14" Padding="24" HorizontalAlignment="Center" />
+            </ScrollViewer>
+
+            <!-- Side pane: comments or extracted text -->
+            <Grid x:Name="SidePane" Grid.Column="2" Width="330" Visibility="Collapsed" Background="{ThemeResource VisyaPaneBrush}"
+                  BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1,0,0,0" RowSpacing="8" Padding="12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid>
+                    <TextBlock x:Name="SidePaneTitle" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                    <Button HorizontalAlignment="Right" Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Close" Click="CloseSidePane_Click">
+                        <FontIcon Glyph="{StaticResource IconClose}" FontSize="12" />
+                    </Button>
+                </Grid>
+
+                <Grid x:Name="CommentsPanel" Grid.Row="1">
+                    <TextBlock x:Name="NoCommentsText" Text="No comments yet. Use Comment or Highlight in Edit mode." TextWrapping="Wrap" Opacity="0.7" />
+                    <ListView x:Name="CommentsList" SelectionMode="None" IsItemClickEnabled="True" ItemClick="CommentsList_ItemClick">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="local:CommentItem">
+                                <Grid Padding="0,8" ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="{x:Bind Glyph}" FontSize="16" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                    <StackPanel Grid.Column="1" Spacing="2">
+                                        <TextBlock Text="{x:Bind Heading}" FontSize="12" Opacity="0.7" />
+                                        <TextBlock Text="{x:Bind Contents}" TextWrapping="Wrap" />
+                                        <TextBlock Text="{x:Bind Author}" FontSize="12" Opacity="0.6" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                                        <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Edit comment" Click="CommentEdit_Click">
+                                            <FontIcon Glyph="{StaticResource IconEditText}" FontSize="12" />
+                                        </Button>
+                                        <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Delete" Click="CommentDelete_Click">
+                                            <FontIcon Glyph="{StaticResource IconDelete}" FontSize="12" />
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+
+                <Grid x:Name="TextPanel" Grid.Row="1" RowSpacing="8" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBox x:Name="ExtractedText" AcceptsReturn="True" TextWrapping="Wrap" IsReadOnly="True"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto" FontFamily="Segoe UI" />
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6">
+                        <Button Click="CopyExtracted_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconCopy}" FontSize="14" />
+                                <TextBlock Text="Copy" />
+                            </StackPanel>
+                        </Button>
+                        <Button Click="SaveExtractedText_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconText}" FontSize="14" />
+                                <TextBlock Text=".txt" />
+                            </StackPanel>
+                        </Button>
+                        <Button Click="SaveExtractedWord_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{StaticResource IconWord}" FontSize="14" />
+                                <TextBlock Text=".docx" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

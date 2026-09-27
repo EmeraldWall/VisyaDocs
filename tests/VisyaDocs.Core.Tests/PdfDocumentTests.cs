@@ -75,6 +75,7 @@ public class PdfDocumentTests
         Assert.InRange(index, hit.CharIndex, hit.CharIndex + hit.Length - 1);
         Assert.Equal("VisyaDocs", doc.GetWordAt(0, index).Text);
         Assert.Equal("Hello", doc.GetSelection(0, 4, 0).Text);
+        Assert.Equal("Hello VisyaDocs", doc.SelectAll(0).Text.Trim());
     }
 
     [Fact]

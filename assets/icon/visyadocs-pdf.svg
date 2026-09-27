@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- File type icon for .pdf files opened with VisyaDocs. -->
+  <defs>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2B7FFF"/>
+      <stop offset="1" stop-color="#5B3FD9"/>
+    </linearGradient>
+  </defs>
+  <path d="M58 16H158L210 68V220a16 16 0 0 1-16 16H58a16 16 0 0 1-16-16V32a16 16 0 0 1 16-16Z"
+        fill="#FFFFFF" stroke="#AEBBD0" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M158 16V56a12 12 0 0 0 12 12H210Z" fill="#C7D3E6" stroke="#AEBBD0" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M90 62L126 134L162 62" fill="none" stroke="url(#mark)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="26" y="158" width="170" height="60" rx="12" fill="#D93B3B"/>
+  <path d="M52 204V172h14a10 10 0 0 1 0 20H52M88 204V172h11a16 16 0 0 1 0 32ZM134 204V172h24M134 188h19"
+        fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

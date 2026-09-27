@@ -47,6 +47,13 @@ public sealed unsafe partial class PdfDocument
         });
     }
 
+    /// <summary>Selects all text on a page.</summary>
+    public TextSelection SelectAll(int pageIndex)
+    {
+        int count = WithTextPage(pageIndex, (_, text) => text == 0 ? 0 : Pdfium.FPDFText_CountChars(text));
+        return count == 0 ? new TextSelection(pageIndex, 0, 0, string.Empty, []) : GetSelection(pageIndex, 0, count - 1);
+    }
+
     /// <summary>Selects the word around a character index.</summary>
     public TextSelection GetWordAt(int pageIndex, int charIndex) => WithTextPage(pageIndex, (_, text) =>
     {

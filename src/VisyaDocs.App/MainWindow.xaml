@@ -1,0 +1,121 @@
+<Window
+    x:Class="VisyaDocs.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="VisyaDocs">
+
+    <Grid x:Name="Root" Background="{ThemeResource VisyaWindowBrush}" AllowDrop="True"
+          DragOver="Root_DragOver" Drop="Root_Drop" KeyboardAcceleratorPlacementMode="Hidden">
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Modifiers="Control" Key="O" Invoked="OpenAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control" Key="W" Invoked="CloseTabAccelerator_Invoked" />
+        </Grid.KeyboardAccelerators>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Title bar: the left part is the drag region, the buttons on the right stay clickable. -->
+        <Grid Height="44">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition x:Name="CaptionInset" Width="138" />
+            </Grid.ColumnDefinitions>
+            <Grid x:Name="AppTitleBar" Background="Transparent">
+                <StackPanel Orientation="Horizontal" Spacing="10" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <Image Source="ms-appx:///Assets/AppLogo.png" Width="20" Height="20" />
+                    <TextBlock Text="VisyaDocs" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock x:Name="TitleDocument" Foreground="{ThemeResource VisyaSubtleTextBrush}"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Grid>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Open a PDF (Ctrl+O)" Click="Open_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="{StaticResource IconOpen}" FontSize="16" />
+                        <TextBlock Text="Open" />
+                    </StackPanel>
+                </Button>
+                <DropDownButton ToolTipService.ToolTip="Create a PDF" Background="Transparent" BorderThickness="0" Height="34">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="{StaticResource IconImagesToPdf}" FontSize="16" />
+                        <TextBlock Text="Create" />
+                    </StackPanel>
+                    <DropDownButton.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuFlyoutItem Text="Images to PDF" Click="ImagesToPdf_Click">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="{StaticResource IconImagesToPdf}" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Text="Merge PDFs" Click="MergePdfs_Click">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="{StaticResource IconMerge}" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </DropDownButton.Flyout>
+                </DropDownButton>
+                <Button x:Name="ThemeButton" Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Theme">
+                    <FontIcon Glyph="{StaticResource IconTheme}" FontSize="16" />
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <RadioMenuFlyoutItem x:Name="ThemeSystemItem" Text="System" GroupName="Theme" Click="ThemeItem_Click" Tag="System" />
+                            <RadioMenuFlyoutItem x:Name="ThemeLightItem" Text="Light (soft grey)" GroupName="Theme" Click="ThemeItem_Click" Tag="Light" />
+                            <RadioMenuFlyoutItem x:Name="ThemeDarkItem" Text="Dark (black and grey)" GroupName="Theme" Click="ThemeItem_Click" Tag="Dark" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+                <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Settings" Click="Settings_Click">
+                    <FontIcon Glyph="{StaticResource IconSettings}" FontSize="16" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <TabView x:Name="Tabs" Grid.Row="1" Visibility="Collapsed" IsAddTabButtonVisible="True"
+                 AddTabButtonClick="Tabs_AddTabButtonClick" TabCloseRequested="Tabs_TabCloseRequested"
+                 SelectionChanged="Tabs_SelectionChanged" TabWidthMode="SizeToContent" />
+
+        <!-- Home: shown when no document is open. -->
+        <ScrollViewer x:Name="HomePanel" Grid.Row="1">
+            <StackPanel MaxWidth="700" Margin="32,48,32,32" Spacing="24" HorizontalAlignment="Center">
+                <StackPanel Spacing="4">
+                    <Image Source="ms-appx:///Assets/AppLogo.png" Width="72" Height="72" HorizontalAlignment="Left" />
+                    <TextBlock Text="VisyaDocs" Style="{StaticResource TitleTextBlockStyle}" />
+                    <TextBlock Text="Read, edit, comment and convert PDFs. Scanned pages become searchable text with the OCR built into Windows."
+                               Foreground="{ThemeResource VisyaSubtleTextBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Button Style="{StaticResource HomeCardButtonStyle}" Click="Open_Click">
+                        <StackPanel Spacing="8">
+                            <FontIcon Glyph="{StaticResource IconOpen}" FontSize="24" HorizontalAlignment="Left" Foreground="{ThemeResource VisyaAccentBrush}" />
+                            <TextBlock Text="Open PDF" FontWeight="SemiBold" />
+                            <TextBlock Text="Or drop files here" Foreground="{ThemeResource VisyaSubtleTextBrush}" FontSize="12" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource HomeCardButtonStyle}" Click="ImagesToPdf_Click">
+                        <StackPanel Spacing="8">
+                            <FontIcon Glyph="{StaticResource IconImagesToPdf}" FontSize="24" HorizontalAlignment="Left" Foreground="{ThemeResource VisyaAccentBrush}" />
+                            <TextBlock Text="Images to PDF" FontWeight="SemiBold" />
+                            <TextBlock Text="JPG, PNG, TIFF, HEIC" Foreground="{ThemeResource VisyaSubtleTextBrush}" FontSize="12" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource HomeCardButtonStyle}" Click="MergePdfs_Click">
+                        <StackPanel Spacing="8">
+                            <FontIcon Glyph="{StaticResource IconMerge}" FontSize="24" HorizontalAlignment="Left" Foreground="{ThemeResource VisyaAccentBrush}" />
+                            <TextBlock Text="Merge PDFs" FontWeight="SemiBold" />
+                            <TextBlock Text="Combine files into one" Foreground="{ThemeResource VisyaSubtleTextBrush}" FontSize="12" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel x:Name="RecentSection" Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="{StaticResource IconRecent}" FontSize="14" />
+                        <TextBlock Text="Recent" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <StackPanel x:Name="RecentList" Spacing="2" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <InfoBar x:Name="ErrorBar" Grid.Row="1" Severity="Error" IsOpen="False" VerticalAlignment="Bottom"
+                 HorizontalAlignment="Center" Margin="16" MaxWidth="640" />
+    </Grid>
+</Window>

@@ -35,31 +35,34 @@ public static class Converter
     }
 
     public static void ExportText(PdfDocument doc, string path, IReadOnlyList<int> pages,
-        IProgress<double>? progress = null, CancellationToken ct = default)
-    {
-        var sb = new StringBuilder();
-        for (int i = 0; i < pages.Count; i++)
-        {
-            ct.ThrowIfCancellationRequested();
-            if (i > 0) sb.Append("\r\n\f\r\n");
-            sb.Append(doc.GetPageText(pages[i]));
-            progress?.Report((i + 1.0) / pages.Count);
-        }
-        File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));
-    }
+        IProgress<double>? progress = null, CancellationToken ct = default) =>
+        WriteText(path, ExtractTexts(doc, pages, progress, ct));
 
     public static void ExportDocx(PdfDocument doc, string path, IReadOnlyList<int> pages,
-        IProgress<double>? progress = null, CancellationToken ct = default)
+        IProgress<double>? progress = null, CancellationToken ct = default) =>
+        WriteDocx(path, ExtractTexts(doc, pages, progress, ct));
+
+    /// <summary>Writes page texts as UTF-8 with a form feed between pages.</summary>
+    public static void WriteText(string path, IReadOnlyList<string> pageTexts) =>
+        File.WriteAllText(path, string.Join("\r\n\f\r\n", pageTexts), new UTF8Encoding(true));
+
+    /// <summary>Writes page texts as a Word document, rebuilding paragraphs and breaking pages.</summary>
+    public static void WriteDocx(string path, IReadOnlyList<string> pageTexts)
     {
-        var content = new List<IReadOnlyList<string>>();
+        using var file = File.Create(path);
+        DocxWriter.Write(file, pageTexts.Select(ToParagraphs).ToArray());
+    }
+
+    private static List<string> ExtractTexts(PdfDocument doc, IReadOnlyList<int> pages, IProgress<double>? progress, CancellationToken ct)
+    {
+        var texts = new List<string>(pages.Count);
         for (int i = 0; i < pages.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
-            content.Add(ToParagraphs(doc.GetPageText(pages[i])));
+            texts.Add(doc.GetPageText(pages[i]));
             progress?.Report((i + 1.0) / pages.Count);
         }
-        using var file = File.Create(path);
-        DocxWriter.Write(file, content);
+        return texts;
     }
 
     /// <summary>Renders pages to images named "name-1.png" etc. and returns the written files.</summary>
