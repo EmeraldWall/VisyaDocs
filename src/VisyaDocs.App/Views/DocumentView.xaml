@@ -9,6 +9,7 @@
             <KeyboardAccelerator Modifiers="Control" Key="S" Invoked="SaveAccelerator_Invoked" />
             <KeyboardAccelerator Modifiers="Control,Shift" Key="S" Invoked="SaveAsAccelerator_Invoked" />
             <KeyboardAccelerator Modifiers="Control" Key="F" Invoked="FindAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control" Key="P" Invoked="PrintAccelerator_Invoked" />
             <KeyboardAccelerator Modifiers="Control" Key="Z" Invoked="UndoAccelerator_Invoked" />
             <KeyboardAccelerator Modifiers="Control" Key="Y" Invoked="RedoAccelerator_Invoked" />
             <KeyboardAccelerator Modifiers="Control" Key="C" Invoked="CopyAccelerator_Invoked" />
@@ -54,6 +55,9 @@
                     </Button>
                     <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Save as (Ctrl+Shift+S)" Click="SaveAs_Click">
                         <FontIcon Glyph="{StaticResource IconSaveAs}" FontSize="16" />
+                    </Button>
+                    <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Print (Ctrl+P)" Click="Print_Click">
+                        <FontIcon Glyph="{StaticResource IconPrint}" FontSize="16" />
                     </Button>
                     <ToggleButton x:Name="ThumbsToggle" Style="{StaticResource ToolToggleStyle}" ToolTipService.ToolTip="Page thumbnails"
                                   Click="ThumbsToggle_Click">
