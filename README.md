@@ -44,7 +44,7 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 | Word export | A small OOXML writer, no Office SDK |
 | Runtime | .NET 10, Native AOT, trimmed, self contained: no .NET install needed |
 
-The CI job prints the size of the published app in its summary.
+Measured on CI (x64, Native AOT, no debug symbols): the app folder is about 67 MB (29 MB zipped). About 45 MB of that is the bundled WinUI runtime, which is what lets the app run from a folder with nothing to install; VisyaDocs itself is about 8 MB and PDFium about 7 MB. The CI job prints the size in its summary.
 
 ## Requirements
 
