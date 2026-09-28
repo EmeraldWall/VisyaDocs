@@ -3,6 +3,14 @@ using System.Text.Json.Serialization;
 
 namespace VisyaDocs.App.Services;
 
+public enum ViewLayout
+{
+    Continuous,
+    TwoPages,
+    TwoPagesCover,
+    SinglePage,
+}
+
 public enum AppTheme
 {
     System,
@@ -32,6 +40,15 @@ public sealed class AppSettings
     public string Author { get; set; } = Environment.UserName;
 
     public List<string> RecentFiles { get; set; } = [];
+
+    /// <summary>Page layout used when reading.</summary>
+    public ViewLayout Layout { get; set; } = ViewLayout.Continuous;
+
+    /// <summary>Whether the floating tool rail is collapsed to its handle.</summary>
+    public bool RailCollapsed { get; set; }
+
+    public static string SignaturesFolder { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VisyaDocs", "signatures");
 
     public void AddRecent(string path)
     {

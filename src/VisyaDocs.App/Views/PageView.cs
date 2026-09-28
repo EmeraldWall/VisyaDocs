@@ -25,7 +25,7 @@ public sealed partial class PageView : Grid
     private readonly Canvas _search = new();
     private readonly Canvas _selection = new();
     private readonly ScaleTransform _marksScale = new();
-    private readonly List<(FrameworkElement Element, ViewRect Rect)> _hotspots = [];
+    private readonly List<(FrameworkElement Element, ViewRect Rect, string Layer)> _hotspots = [];
 
     public PageView(int index, PageGeometry geometry)
     {
@@ -59,7 +59,7 @@ public sealed partial class PageView : Grid
         Width = Math.Round(Geometry.ViewWidth * scale);
         Height = Math.Round(Geometry.ViewHeight * scale);
         _marksScale.ScaleX = _marksScale.ScaleY = scale;
-        foreach (var (element, rect) in _hotspots) Place(element, rect);
+        foreach (var (element, rect, _) in _hotspots) Place(element, rect);
     }
 
     public void SetBitmap(ImageSource? source, double stamp)
@@ -110,19 +110,42 @@ public sealed partial class PageView : Grid
 
     public void ClearSelection() => _selection.Children.Clear();
 
-    /// <summary>Adds a clickable area over a page space rectangle (for example a sticky note icon).</summary>
-    public void AddHotspot(FrameworkElement element, PdfRect rect)
+    /// <summary>Form fields of this page, refreshed with the comment hotspots.</summary>
+    public IReadOnlyList<FormField> FormFields { get; set; } = [];
+
+    /// <summary>
+    /// Adds an interactive element over a page space rectangle (a sticky note hotspot, a form field
+    /// editor, a signature preview). It follows zoom changes. Layers can be cleared separately.
+    /// </summary>
+    public void AddHotspot(FrameworkElement element, PdfRect rect, string layer = "notes")
     {
         var view = Geometry.ToView(rect);
-        _hotspots.Add((element, view));
+        _hotspots.Add((element, view, layer));
         Overlay.Children.Add(element);
         Place(element, view);
     }
 
-    public void ClearHotspots()
+    /// <summary>Adds an element over a rectangle given in view points (top-left origin).</summary>
+    public void AddHotspot(FrameworkElement element, ViewRect view, string layer)
     {
-        foreach (var (element, _) in _hotspots) Overlay.Children.Remove(element);
-        _hotspots.Clear();
+        _hotspots.Add((element, view, layer));
+        Overlay.Children.Add(element);
+        Place(element, view);
+    }
+
+    /// <summary>Moves or resizes an element added with <see cref="AddHotspot(FrameworkElement, ViewRect, string)"/>.</summary>
+    public void UpdateHotspot(FrameworkElement element, ViewRect view)
+    {
+        int i = _hotspots.FindIndex(h => h.Element == element);
+        if (i < 0) return;
+        _hotspots[i] = (element, view, _hotspots[i].Layer);
+        Place(element, view);
+    }
+
+    public void ClearHotspots(string layer = "notes")
+    {
+        foreach (var (element, _, _) in _hotspots.Where(h => h.Layer == layer)) Overlay.Children.Remove(element);
+        _hotspots.RemoveAll(h => h.Layer == layer);
     }
 
     private void Place(FrameworkElement element, ViewRect view)
@@ -130,8 +153,8 @@ public sealed partial class PageView : Grid
         var r = view.Scale(DipPerPoint);
         Canvas.SetLeft(element, r.X);
         Canvas.SetTop(element, r.Y);
-        element.Width = Math.Max(16, r.Width);
-        element.Height = Math.Max(16, r.Height);
+        element.Width = Math.Max(12, r.Width);
+        element.Height = Math.Max(12, r.Height);
     }
 
     private void AddRect(Canvas canvas, PdfRect rect, Brush brush)

@@ -3,12 +3,12 @@ using System.IO.Compression;
 
 namespace VisyaDocs.Core.Export;
 
-/// <summary>Minimal PNG writer for opaque page renders (BGRA in, 24 bit RGB out).</summary>
+/// <summary>Minimal PNG writer: BGRA in, 24 bit RGB out (or 32 bit RGBA with <c>alpha</c>, straight alpha expected).</summary>
 public static class PngEncoder
 {
     private static readonly uint[] CrcTable = BuildCrcTable();
 
-    public static void Write(Stream output, ReadOnlySpan<byte> bgra, int width, int height)
+    public static void Write(Stream output, ReadOnlySpan<byte> bgra, int width, int height, bool alpha = false)
     {
         output.Write([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 
@@ -16,14 +16,15 @@ public static class PngEncoder
         BinaryPrimitives.WriteInt32BigEndian(header, width);
         BinaryPrimitives.WriteInt32BigEndian(header[4..], height);
         header[8] = 8;  // bit depth
-        header[9] = 2;  // RGB
+        header[9] = (byte)(alpha ? 6 : 2);  // RGBA or RGB
+        int channels = alpha ? 4 : 3;
         header[10] = 0; header[11] = 0; header[12] = 0;
         WriteChunk(output, "IHDR"u8, header);
 
         using var compressed = new MemoryStream();
         using (var z = new ZLibStream(compressed, CompressionLevel.Optimal, leaveOpen: true))
         {
-            var row = new byte[1 + width * 3];
+            var row = new byte[1 + width * channels];
             var previous = new byte[row.Length];
             var filtered = new byte[row.Length];
             for (int y = 0; y < height; y++)
@@ -31,9 +32,11 @@ public static class PngEncoder
                 var src = bgra.Slice(y * width * 4, width * 4);
                 for (int x = 0; x < width; x++)
                 {
-                    row[1 + x * 3] = src[x * 4 + 2];
-                    row[2 + x * 3] = src[x * 4 + 1];
-                    row[3 + x * 3] = src[x * 4];
+                    int o = 1 + x * channels;
+                    row[o] = src[x * 4 + 2];
+                    row[o + 1] = src[x * 4 + 1];
+                    row[o + 2] = src[x * 4];
+                    if (alpha) row[o + 3] = src[x * 4 + 3];
                 }
                 // "Up" filter: documents have long runs of identical rows, which this compresses well.
                 filtered[0] = 2;

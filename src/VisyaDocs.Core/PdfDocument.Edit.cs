@@ -132,6 +132,38 @@ public sealed unsafe partial class PdfDocument
         return 0;
     }));
 
+    /// <summary>
+    /// Places an image (for example a signature) on a page, stretched to the given page space
+    /// rectangle. Pixels are top-down BGRA with straight (not premultiplied) alpha; transparent
+    /// pixels let the page show through.
+    /// </summary>
+    public void AddImageStamp(int pageIndex, byte[] bgra, int width, int height, PdfRect bounds) => Mutate(() => WithPage(pageIndex, page =>
+    {
+        if (width <= 0 || height <= 0 || bgra.Length < width * height * 4) throw new ArgumentException("Invalid image size.");
+        fixed (byte* p = bgra)
+        {
+            nint bitmap = Pdfium.FPDFBitmap_CreateEx(width, height, Pdfium.FPDFBitmap_BGRA, p, width * 4);
+            if (bitmap == 0) throw new PdfException("The image is too large.");
+            try
+            {
+                nint image = Pdfium.FPDFPageObj_NewImageObj(Handle);
+                if (Pdfium.FPDFImageObj_SetBitmap(&page, 1, image, bitmap) == 0)
+                {
+                    Pdfium.FPDFPageObj_Destroy(image);
+                    throw new PdfException("The image could not be added.");
+                }
+                Pdfium.FPDFImageObj_SetMatrix(image, bounds.Width, 0, 0, bounds.Height, bounds.Left, bounds.Bottom);
+                Pdfium.FPDFPage_InsertObject(page, image);
+            }
+            finally
+            {
+                Pdfium.FPDFBitmap_Destroy(bitmap);
+            }
+        }
+        if (Pdfium.FPDFPage_GenerateContent(page) == 0) throw new PdfException("The page could not be updated.");
+        return 0;
+    }));
+
     // Annotations -------------------------------------------------------------------------
 
     public IReadOnlyList<AnnotationInfo> GetAnnotations(int pageIndex) => WithPage(pageIndex, page =>

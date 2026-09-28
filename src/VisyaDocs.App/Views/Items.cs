@@ -22,7 +22,8 @@ public sealed partial class ThumbnailItem(int index, double width, double height
 public sealed partial class CommentItem(AnnotationInfo info) : ObservableObject
 {
     public AnnotationInfo Info { get; } = info;
-    public string Glyph { get; } = info.Kind == AnnotationKind.Highlight ? "" : "";
+    public ImageSource IconSource { get; } = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(
+        new Uri(info.Kind == AnnotationKind.Highlight ? "ms-appx:///Assets/Icons/highlight.png" : "ms-appx:///Assets/Icons/comment.png"));
     public string Heading { get; } = $"{(info.Kind == AnnotationKind.Highlight ? "Highlight" : "Comment")} on page {info.PageIndex + 1}";
     public string Contents { get; } = info.Contents.Length > 0 ? info.Contents : "(no text)";
     public string Author { get; } = info.Author;
