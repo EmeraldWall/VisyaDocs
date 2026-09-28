@@ -23,7 +23,7 @@ To remove it later: Start menu, right click VisaryPDF, **Uninstall**.
 2. Choose **Sideloading**, keep **Enable automatic updates** off, **Next**.
 3. Signing: **Create...** a test certificate (publisher `CN=VisaryPDF`), **Next**.
 4. Select **x64** (and **ARM64** if wanted), Release, publish profile **msix-x64** / **msix-ARM64**, then **Create**.
-5. The output folder contains `VisaryPDF_1.0.0.0_x64.msix` and a `.cer` file. On the other PC, first install the `.cer` into **Local Machine > Trusted People**, then double click the `.msix`.
+5. The output folder (`AppPackages`) contains `VisyaDocs.App_1.0.0.0_x64.msix` and a `.cer` file (the file name comes from the project; the installed app is VisaryPDF). On the other PC, first install the `.cer` into **Local Machine > Trusted People**, then double click the `.msix`.
 
 ---
 
@@ -71,7 +71,7 @@ How to capture at a size the Store accepts:
 3. Version: 1.0.0.0 for the first release (the last number must stay 0 for the Store). Raise it for every update.
 4. Architectures: **x64** and **ARM64**, configuration **Release**, publish profiles **msix-x64** and **msix-ARM64**. **Generate app bundle: Always**.
 5. **Create**. When it finishes, run the **Windows App Certification Kit** that Visual Studio offers and fix anything it reports.
-6. The output folder contains `VisaryPDF_1.0.0.0_x64_arm64_bundle.msixupload` (this is the file you upload).
+6. The output folder contains a file ending in `_bundle.msixupload`, for example `VisyaDocs.App_1.0.0.0_x64_arm64_bundle.msixupload`. This is the file you upload (the file name comes from the project; the Store shows the app as VisaryPDF).
 
 The Store signs the package itself; you do not need a code signing certificate.
 
@@ -95,4 +95,4 @@ Raise the version (for example 1.0.1.0) in **Create App Packages**, build the ne
 
 ## Checked by CI
 
-Every push runs a job that builds the x64 MSIX exactly this way (msix-x64 profile, Native AOT), signs it with a throwaway test certificate, installs it on a clean Windows runner and starts it. The test package and its certificate are attached to the run as **VisaryPDF-x64-msix-test**.
+Every push runs a job that builds the x64 MSIX exactly this way (msix-x64 profile, Native AOT), signs it with a throwaway test certificate, installs it on a clean Windows runner (as package `VisaryPDF_1.0.0.0_x64`) and starts it. The test package and its certificate are attached to the run as **VisaryPDF-x64-msix-test**.
