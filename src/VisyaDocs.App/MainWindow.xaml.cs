@@ -54,6 +54,9 @@ public sealed partial class MainWindow : Window
         RefreshRecent();
     }
 
+    /// <summary>The document in the active tab, if any.</summary>
+    internal DocumentView? ActiveView => _active?.View;
+
     public bool IsFullScreen => AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen;
 
     /// <summary>Opens PDFs in tabs; image files are combined into a new PDF.</summary>

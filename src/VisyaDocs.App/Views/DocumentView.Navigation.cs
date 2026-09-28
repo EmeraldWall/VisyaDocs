@@ -167,4 +167,17 @@ public sealed partial class DocumentView
             ApplyAutomationNames(child);
         }
     }
+
+    public int PageCount => _pages.Count;
+
+    /// <summary>Scrolls through every page at the given zoom (used by the CI memory check).</summary>
+    internal async Task TourAsync(double zoom, int delayMs)
+    {
+        SetZoom(zoom);
+        for (int i = 0; i < _pages.Count && !_disposed; i++)
+        {
+            GoToPage(i);
+            await Task.Delay(delayMs);
+        }
+    }
 }
