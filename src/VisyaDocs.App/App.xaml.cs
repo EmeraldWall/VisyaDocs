@@ -26,6 +26,7 @@ public partial class App : Application
 
         var files = Environment.GetCommandLineArgs().Skip(1).Where(File.Exists).ToArray();
         if (files.Length > 0) MainWindow.OpenFiles(files);
+        if (SelfTest.OutputPath is { Length: > 0 } output) _ = SelfTest.RunAsync(output);
     }
 
     /// <summary>Another launch (for example a double-clicked PDF) was handed to this instance.</summary>

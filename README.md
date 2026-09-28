@@ -7,7 +7,7 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 ## Features
 
 **Reading first**
-- Thin title bar (the height of the window buttons) with a File menu and compact document tabs that shrink and scroll instead of running under the window buttons
+- Thin title bar (the height of the window buttons) with a Menu button and compact document tabs that shrink and scroll instead of running under the window buttons. Drag it to move the window, double-click it to maximize or restore
 - Reading and editing tools live in a floating, rounded tool bar that folds away to a small handle and can be dragged to either side. Pages are laid out around it, so it never covers them or the side panes
 - Page and zoom indicator that fades out while you read
 - Layouts: continuous scroll, two pages side by side, two pages with the cover alone, single page (flip with PageUp/PageDown, arrow keys or the wheel)
@@ -17,7 +17,9 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 - Links work: internal links jump to their page, web links ask before opening in your browser
 - Search (Ctrl+F) with highlighted matches, Match case and Whole word options, text selection and copy
 - Reopening a file returns to the page and zoom where you left off
-- Keyboard shortcuts list (F1 or File > Keyboard shortcuts)
+- Keyboard shortcuts list (F1 or Menu > Keyboard shortcuts)
+- Full keyboard use: Tab moves between controls (the tool bar is one stop, Up and Down move inside it), F6 jumps between areas, Alt shows a key letter on every button, tabs are reachable with Tab and the arrow keys, Space pages through the document, Ctrl+G goes to a page
+- Smooth motion: zoom commands glide to the new size, nearby page jumps scroll, single pages slide when flipped, panels fade and slide in. All of it is skipped when animations are turned off in Windows
 - Document properties (Ctrl+D): title, author, dates, PDF version, page size, security and permissions
 
 **Pages**
@@ -25,7 +27,7 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 
 **Password protected PDFs**
 - Opening asks for the password. Saving keeps the protection
-- File > "Save a copy without password" writes an unprotected copy, offered only for files you opened with their password. The original is not changed
+- Menu > "Save a copy without password" writes an unprotected copy, offered only for files you opened with their password. The original is not changed
 - Restrictions set by the author (no printing, copying or editing) are respected: those tools are disabled with a short explanation
 - Adding a password is not possible: PDFium, the PDF engine, can read encryption but cannot write it
 
@@ -54,8 +56,8 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
   - Light is a soft grey instead of stark white, to reduce eye strain
   - Dark is the Windows style dark grey; Black is pure black (great on OLED screens)
   - Pages can be dimmed slightly in Dark and Black for night reading
-- Settings is a page inside the app (File > Settings), every change applies at once
-- Icons are vector (SVG) and render sharp at any display scale
+- Settings is a page inside the app (Menu > Settings), every change applies at once
+- Icons are vector (SVG) and render sharp at any display scale. There are two icon sets tuned for contrast: a deeper one for the Light theme and a brighter one for Dark and Black, so icons stay readable on every background
 - Color icons in Microsoft's Fluent style (see Third party notices)
 - Custom app icon and .pdf file icon (sources in `assets/icon`)
 - One window: opening another PDF from Explorer adds a tab to the running window
@@ -74,6 +76,10 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 | Runtime | .NET 10, Native AOT, trimmed, self contained: no .NET install needed |
 
 Measured on CI (x64, Native AOT, no debug symbols): the app folder is about 67 MB (29 MB zipped). About 45 MB of that is the bundled WinUI runtime, which is what lets the app run from a folder with nothing to install; VisyaDocs itself is about 8 MB and PDFium about 7 MB. The CI job prints the size in its summary.
+
+### Memory
+
+Only pages on screen (plus a little ahead) keep a rendered image, page images are reused while you scroll, tabs in the background and a minimized window give their images back, and thumbnails are kept only while visible. CI opens an 80 page PDF, scrolls through every page at 200% and reports the memory use in the job summary.
 
 ## Requirements
 
@@ -103,7 +109,7 @@ The core library (`VisyaDocs.Core`) has no Windows dependencies, so its tests al
 
 ### Regenerating icons
 
-Toolbar icons: `python build/export_ui_icons.py` (needs `pip install cairosvg`).
+Toolbar icons: `python build/export_ui_icons.py` (standard library only). It writes both icon sets and `Themes/Icons.xaml`.
 
 App icon:
 
@@ -129,7 +135,7 @@ build/                  PDFium download targets, icon export script
 - Text editing works on text runs as the PDF stores them. Some PDFs store one word or even one character per run, so an edit may cover a smaller piece than a whole line.
 - When the embedded font cannot show the new characters, the replacement uses Helvetica (or Arial for non Latin text), so the look can differ slightly from the original.
 - Text written into CJK scripts needs a font that covers them; Arial is used as the fallback.
-- Undo history is limited to 30 steps and about 256 MB, so very large files keep fewer steps.
+- Undo history is limited to 30 steps and about 64 MB, so very large files keep fewer steps.
 - Password protection cannot be added (see above).
 
 ## Third party notices

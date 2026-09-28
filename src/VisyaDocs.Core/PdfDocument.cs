@@ -15,7 +15,7 @@ public sealed unsafe partial class PdfDocument : IDisposable
     /// Undo and redo keep a full copy of the file per step; this caps their total size so large
     /// PDFs cannot exhaust memory (the newest step is always kept).
     /// </summary>
-    internal static long MaxHistoryBytes = 256L * 1024 * 1024;
+    internal static long MaxHistoryBytes = 64L * 1024 * 1024;
 
     internal static readonly Lock Sync = new();
     private static bool s_initialized;

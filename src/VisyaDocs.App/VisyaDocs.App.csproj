@@ -24,7 +24,14 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <!-- Program.cs provides Main (single instance redirection). -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <!-- A desktop reader does not need a background GC thread; the heap stays small. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Ask the GC to compact more eagerly (large page buffers) instead of growing the heap. -->
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="Assets\**" />

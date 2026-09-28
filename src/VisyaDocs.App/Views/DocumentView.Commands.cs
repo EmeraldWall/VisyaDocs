@@ -1,11 +1,12 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media.Animation;
 using VisyaDocs.App.Services;
 
 namespace VisyaDocs.App.Views;
 
-/// <summary>Document commands offered by the window's File menu.</summary>
+/// <summary>Document commands offered by the window's Menu.</summary>
 public enum DocCommand
 {
     Save,
@@ -23,12 +24,12 @@ public enum DocCommand
     RemovePassword,
 }
 
-// File menu commands and the movable tool rail.
+// Menu commands and the movable tool rail.
 public sealed partial class DocumentView
 {
     private const double RailMargin = 12;
 
-    /// <summary>Runs a File menu command on this document (the same code as the shortcuts).</summary>
+    /// <summary>Runs a Menu command on this document (the same code as the shortcuts).</summary>
     public void Execute(DocCommand command)
     {
         var none = new RoutedEventArgs();
@@ -102,6 +103,8 @@ public sealed partial class DocumentView
         var origin = Rail.TransformToVisual(PageArea).TransformPoint(new Windows.Foundation.Point(0, 0));
         _dragOffset = new Windows.Foundation.Point(point.X - origin.X, point.Y - origin.Y);
         _draggingRail = true;
+        // The rail follows the pointer directly while dragging; it glides only when it snaps to a side.
+        Rail.Transitions = null;
         RailGrip.CapturePointer(e.Pointer);
         Rail.HorizontalAlignment = HorizontalAlignment.Left;
         Rail.Margin = new Thickness(origin.X, origin.Y, 0, 0);
@@ -130,6 +133,7 @@ public sealed partial class DocumentView
         settings.RailSide = centerX < PageArea.ActualWidth / 2 ? RailSide.Left : RailSide.Right;
         settings.RailTop = Math.Clamp((Rail.Margin.Top - RailMargin) / free, 0, 1);
         settings.Save();
+        if (Motion.Enabled) Rail.Transitions = [new RepositionThemeTransition()];
         PositionRail();
         LayoutPages();
         UpdateVisiblePages();

@@ -3,6 +3,7 @@ using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using VisyaDocs.App.Services;
@@ -18,9 +19,11 @@ namespace VisyaDocs.App;
 public sealed partial class MainWindow : Window
 {
     /// <summary>A compact tab in the title bar and the document it shows.</summary>
-    private sealed class DocTab(DocumentView view, Border header, TextBlock title)
+    private sealed class DocTab(DocumentView view, ContentControl host, Border header, TextBlock title)
     {
         public DocumentView View { get; } = view;
+        /// <summary>The focusable tab in the title bar (keyboard: Tab to reach, arrows to move, Enter to show).</summary>
+        public ContentControl Host { get; } = host;
         public Border Header { get; } = header;
         public TextBlock Title { get; } = title;
     }
@@ -32,8 +35,9 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        // The title bar row is ours. Its drag area is set as a caption region (see UpdateTitleBarRegions),
+        // which gives the standard behavior: drag, double-click to maximize or restore, right-click menu.
         ExtendsContentIntoTitleBar = true;
-        SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Standard;
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "VisyaDocs.ico"));
         AppWindow.Resize(new SizeInt32(1320, 900));
@@ -47,12 +51,19 @@ public sealed partial class MainWindow : Window
             UpdateTabVisuals();
         };
         Root.SizeChanged += (_, _) => UpdateTitleBarRegions();
+        // A minimized window gives its page images back.
+        VisibilityChanged += (_, e) => _active?.View.SetSuspended(!e.Visible);
         Root.Loaded += (_, _) => UpdateTitleBarRegions();
         TabStrip.SizeChanged += (_, _) => UpdateTitleBarRegions();
         TabScroller.SizeChanged += (_, _) => UpdateTitleBarRegions();
 
+        Motion.ShowHide(HomePanel);
+        Motion.ShowHide(SettingsHost, dy: 16);
         RefreshRecent();
     }
+
+    /// <summary>The document in the active tab, if any.</summary>
+    internal DocumentView? ActiveView => _active?.View;
 
     public bool IsFullScreen => AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen;
 
@@ -140,6 +151,7 @@ public sealed partial class MainWindow : Window
     private void AddDocumentTab(PdfDocument doc, string name)
     {
         var view = new DocumentView(doc, name) { Visibility = Visibility.Collapsed };
+        Motion.ShowHide(view, hideMs: 0);
         view.OnFullScreenChanged(IsFullScreen);
         DocumentHost.Children.Add(view);
 
@@ -177,10 +189,22 @@ public sealed partial class MainWindow : Window
             MinWidth = 90,
             MaxWidth = 210,
         };
-        ToolTipService.SetToolTip(header, doc.FilePath ?? name);
+        header.BackgroundTransition = new BrushTransition { Duration = TimeSpan.FromMilliseconds(150) };
+        var host = new ContentControl
+        {
+            Content = header,
+            Tag = "tab",
+            IsTabStop = true,
+            UseSystemFocusVisuals = true,
+            VerticalAlignment = VerticalAlignment.Center,
+            CornerRadius = new CornerRadius(6),
+        };
+        ToolTipService.SetToolTip(host, doc.FilePath ?? name);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(host, name);
 
-        var tab = new DocTab(view, header, title);
+        var tab = new DocTab(view, host, header, title);
         header.Tapped += (_, _) => Activate(tab);
+        host.KeyDown += (_, e) => TabKeyDown(tab, e);
         header.PointerReleased += async (_, e) =>
         {
             // Middle click closes, like browsers.
@@ -190,11 +214,12 @@ public sealed partial class MainWindow : Window
         view.TitleChanged += (_, _) =>
         {
             title.Text = view.Title;
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(host, view.Title);
             UpdateWindowTitle();
         };
 
         _tabs.Add(tab);
-        TabStrip.Children.Add(header);
+        TabStrip.Children.Add(host);
         Activate(tab);
         UpdateHomeVisibility();
     }
@@ -203,11 +228,36 @@ public sealed partial class MainWindow : Window
     {
         CloseSettings();
         _active = tab;
-        foreach (var t in _tabs) t.View.Visibility = t == tab ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var t in _tabs)
+        {
+            t.View.Visibility = t == tab ? Visibility.Visible : Visibility.Collapsed;
+            t.View.SetSuspended(t != tab);
+        }
         UpdateTabVisuals();
         UpdateWindowTitle();
-        tab.Header.StartBringIntoView();
+        tab.Host.StartBringIntoView();
         DispatcherQueue.TryEnqueue(tab.View.FocusViewer);
+    }
+
+    /// <summary>Keyboard on a focused tab: Enter or Space shows it, Left and Right move between tabs.</summary>
+    private void TabKeyDown(DocTab tab, KeyRoutedEventArgs e)
+    {
+        int index = _tabs.IndexOf(tab);
+        switch (e.Key)
+        {
+            case Windows.System.VirtualKey.Enter or Windows.System.VirtualKey.Space:
+                Activate(tab);
+                break;
+            case Windows.System.VirtualKey.Left when index > 0:
+                _tabs[index - 1].Host.Focus(FocusState.Keyboard);
+                break;
+            case Windows.System.VirtualKey.Right when index < _tabs.Count - 1:
+                _tabs[index + 1].Host.Focus(FocusState.Keyboard);
+                break;
+            default:
+                return;
+        }
+        e.Handled = true;
     }
 
     private void UpdateTabVisuals()
@@ -230,9 +280,10 @@ public sealed partial class MainWindow : Window
             if (answer == ContentDialogResult.Primary && !await tab.View.SaveAsync()) return false;
         }
         int index = _tabs.IndexOf(tab);
+        tab.View.SetSuspended(true);
         tab.View.Dispose();
         DocumentHost.Children.Remove(tab.View);
-        TabStrip.Children.Remove(tab.Header);
+        TabStrip.Children.Remove(tab.Host);
         _tabs.Remove(tab);
         if (_active == tab)
         {
@@ -262,8 +313,10 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The title bar row is the drag area; the File button, the tabs and the + button must stay
-    /// clickable, so they are registered as pass-through regions (in physical pixels).
+    /// The title bar row (left of the caption buttons) is registered as the caption region, so Windows
+    /// handles drag, double-click to maximize or restore and the right-click menu. The menu button, the
+    /// tabs and the + button are carved out as pass-through regions so they stay clickable.
+    /// Rectangles are in physical pixels.
     /// </summary>
     private void UpdateTitleBarRegions()
     {
@@ -274,6 +327,7 @@ public sealed partial class MainWindow : Window
         if (IsFullScreen)
         {
             source.ClearRegionRects(NonClientRegionKind.Passthrough);
+            source.ClearRegionRects(NonClientRegionKind.Caption);
             return;
         }
         RectInt32 Rect(FrameworkElement e, double width)
@@ -282,11 +336,34 @@ public sealed partial class MainWindow : Window
             return new RectInt32((int)Math.Round(p.X * scale), (int)Math.Round(p.Y * scale),
                 (int)Math.Round(width * scale), (int)Math.Round(e.ActualHeight * scale));
         }
+        double captionWidth = Math.Max(0, AppTitleBar.ActualWidth - CaptionInset.Width.Value);
+        source.SetRegionRects(NonClientRegionKind.Caption, [Rect(AppTitleBar, captionWidth)]);
         // Only the part of the tab area that actually holds tabs is clickable; the rest stays draggable.
         double tabsWidth = Math.Min(TabScroller.ActualWidth, TabStrip.ActualWidth);
         var rects = new List<RectInt32> { Rect(MenuButton, MenuButton.ActualWidth), Rect(NewTabButton, NewTabButton.ActualWidth) };
         if (tabsWidth > 0) rects.Add(Rect(TabScroller, tabsWidth));
         source.SetRegionRects(NonClientRegionKind.Passthrough, [.. rects]);
+    }
+
+    /// <summary>
+    /// Fallback for double-clicks that reach the app instead of Windows (for example on a system where
+    /// the caption region is not applied): toggle maximized and restored like the system title bar.
+    /// </summary>
+    private void AppTitleBar_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
+    {
+        for (var node = e.OriginalSource as DependencyObject; node is not null && node != AppTitleBar; node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is ButtonBase or ContentControl { Tag: "tab" }) return;
+        }
+        ToggleMaximized();
+        e.Handled = true;
+    }
+
+    private void ToggleMaximized()
+    {
+        if (IsFullScreen || AppWindow.Presenter is not OverlappedPresenter presenter) return;
+        if (presenter.State == OverlappedPresenterState.Maximized) presenter.Restore();
+        else presenter.Maximize();
     }
 
     // Settings page ---------------------------------------------------------------------------
@@ -421,6 +498,38 @@ public sealed partial class MainWindow : Window
 
     private async void Shortcuts_Click(object sender, RoutedEventArgs e) => await ShowShortcutsAsync();
 
+    private void NextRegionAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        MoveFocusRegion(+1);
+    }
+
+    private void PreviousRegionAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        MoveFocusRegion(-1);
+    }
+
+    /// <summary>F6 and Shift+F6 cycle the keyboard focus through the window's areas, as in Windows apps.</summary>
+    private void MoveFocusRegion(int direction)
+    {
+        var regions = new List<UIElement> { AppTitleBar };
+        if (SettingsHost.Visibility == Visibility.Visible) regions.Add(SettingsHost);
+        else if (_active is not null) regions.AddRange(_active.View.FocusRegions());
+        else regions.Add(HomePanel);
+
+        int current = -1;
+        if (FocusManager.GetFocusedElement(Root.XamlRoot) is DependencyObject focused)
+            current = regions.FindIndex(r => DocumentView.IsDescendant(focused, r));
+        for (int step = 1; step <= regions.Count; step++)
+        {
+            var region = regions[((current + direction * step) % regions.Count + regions.Count) % regions.Count];
+            var target = region as Control is { IsTabStop: true } control ? control : FocusManager.FindFirstFocusableElement(region);
+            if (target is Control c && c.Focus(FocusState.Keyboard)) return;
+            if (target is UIElement e && e.Focus(FocusState.Keyboard)) return;
+        }
+    }
+
     private async void ShortcutsAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         args.Handled = true;
@@ -441,6 +550,12 @@ public sealed partial class MainWindow : Window
         ("PageUp / PageDown / Home / End", "Move through pages"),
         ("Ctrl+D", "Document properties"),
         ("F11 / Esc", "Full screen / Leave full screen, cancel"),
+        ("Tab / Shift+Tab", "Move between buttons; the tool bar is one stop, use Up and Down inside it"),
+        ("F6 / Shift+F6", "Jump between areas: title bar, tool bar, pages, side panes"),
+        ("Alt", "Show the key letter of every button (for example Alt, then H for Highlight)"),
+        ("Space / Shift+Space", "Next / previous screen"),
+        ("Ctrl+G", "Go to page"),
+        ("Left / Right on a tab, Enter", "Move between tabs, show the tab"),
         ("F1", "This list"),
     ];
 

@@ -28,7 +28,7 @@ public sealed partial class DocumentView
 {
     private const double PtToDip = 96.0 / 72.0;
     private const double PagePadding = 24, PageSpacing = 14, PageGap = 12;
-    private const double MaxBitmapPixels = 24_000_000;
+    private const double MaxBitmapPixels = 16_000_000;
     private static readonly double[] ZoomSteps = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5, 6];
 
     private readonly List<PageView> _pages = [];
@@ -253,6 +253,7 @@ public sealed partial class DocumentView
     private void ApplyZoom(double zoom, ZoomKind kind, ZoomAnchor? anchor)
     {
         zoom = Math.Clamp(zoom, MinZoom, MaxZoom);
+        _pendingZoom = null;
         CommitEditor();
         _zoom = zoom;
         _zoomKind = kind;
@@ -282,10 +283,44 @@ public sealed partial class DocumentView
 
     private void StepZoom(int direction)
     {
+        double current = _pendingZoom ?? _zoom;
         double next = direction > 0
-            ? ZoomSteps.FirstOrDefault(z => z > _zoom + 0.001, ZoomSteps[^1])
-            : ZoomSteps.LastOrDefault(z => z < _zoom - 0.001, ZoomSteps[0]);
-        SetZoom(next);
+            ? ZoomSteps.FirstOrDefault(z => z > current + 0.001, ZoomSteps[^1])
+            : ZoomSteps.LastOrDefault(z => z < current - 0.001, ZoomSteps[0]);
+        ZoomSmoothly(next, ZoomKind.Custom);
+    }
+
+    private double? _pendingZoom;
+    private ZoomKind _pendingZoomKind;
+
+    /// <summary>
+    /// Zoom commands (buttons, Ctrl+plus/minus, fit) animate the view to the new size around the
+    /// viewport center, like pinch zoom; the pages are re-rendered sharp when the animation ends.
+    /// </summary>
+    private void ZoomSmoothly(double zoom, ZoomKind kind)
+    {
+        zoom = Math.Clamp(zoom, MinZoom, MaxZoom);
+        double factor = zoom / _zoom;
+        if (!Motion.Enabled || IsSinglePage || _pages.Count == 0 || Math.Abs(factor - 1) < 0.01 || Math.Abs(Scroller.ZoomFactor - 1) > 0.005)
+        {
+            SetZoom(zoom, kind);
+            return;
+        }
+        CommitEditor();
+        Scroller.MinZoomFactor = (float)Math.Min(Scroller.MinZoomFactor, factor);
+        Scroller.MaxZoomFactor = (float)Math.Max(Scroller.MaxZoomFactor, factor);
+        double cx = Scroller.HorizontalOffset + Scroller.ViewportWidth / 2;
+        double cy = Scroller.VerticalOffset + Scroller.ViewportHeight / 2;
+        _pendingZoom = zoom;
+        _pendingZoomKind = kind;
+        ZoomText.Text = $"{zoom * 100:0}%";
+        ShowStatusPill();
+        if (!Scroller.ChangeView(Math.Max(0, cx * factor - Scroller.ViewportWidth / 2),
+                Math.Max(0, cy * factor - Scroller.ViewportHeight / 2), (float)factor, false))
+        {
+            _pendingZoom = null;
+            SetZoom(zoom, kind);
+        }
     }
 
     /// <summary>
@@ -297,21 +332,30 @@ public sealed partial class DocumentView
     {
         float factor = Scroller.ZoomFactor;
         var anchor = CaptureAnchor(Scroller.ViewportWidth / 2, Scroller.ViewportHeight / 2);
-        ApplyZoom(_zoom * factor, ZoomKind.Custom, anchor);
+        double zoom = _zoom * factor;
+        var kind = ZoomKind.Custom;
+        // An animated zoom command lands exactly on its target (and keeps "fit width" or "fit page").
+        if (_pendingZoom is { } target && Math.Abs(target - zoom) / target < 0.02)
+        {
+            zoom = target;
+            kind = _pendingZoomKind;
+        }
+        _pendingZoom = null;
+        ApplyZoom(zoom, kind, anchor);
     }
 
     private void ZoomIn_Click(object sender, RoutedEventArgs e) => StepZoom(+1);
 
     private void ZoomOut_Click(object sender, RoutedEventArgs e) => StepZoom(-1);
 
-    private void FitWidth_Click(object sender, RoutedEventArgs e) => SetZoom(FitWidthZoom(), ZoomKind.FitWidth);
+    private void FitWidth_Click(object sender, RoutedEventArgs e) => ZoomSmoothly(FitWidthZoom(), ZoomKind.FitWidth);
 
-    private void FitPage_Click(object sender, RoutedEventArgs e) => SetZoom(FitPageZoom(), ZoomKind.FitPage);
+    private void FitPage_Click(object sender, RoutedEventArgs e) => ZoomSmoothly(FitPageZoom(), ZoomKind.FitPage);
 
     private void ZoomPreset_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: string tag } && double.TryParse(tag, NumberStyles.Float, CultureInfo.InvariantCulture, out double zoom))
-            SetZoom(zoom);
+            ZoomSmoothly(zoom, ZoomKind.Custom);
     }
 
     private void Scroller_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -336,7 +380,11 @@ public sealed partial class DocumentView
             return;
         }
         UpdateVisiblePages();
-        if (!e.IsIntermediate) ShowStatusPill();
+        if (!e.IsIntermediate)
+        {
+            ShowStatusPill();
+            BitmapPool.TrimWhenIdle();
+        }
     }
 
     private void Scroller_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
@@ -362,6 +410,12 @@ public sealed partial class DocumentView
             case VirtualKey.End:
                 GoToPage(_pages.Count - 1);
                 break;
+            case VirtualKey.Space:
+                // Space and Shift+Space move by a screen, like a web browser.
+                bool back = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(CoreVirtualKeyStates.Down);
+                if (IsSinglePage) FlipPage(back ? -1 : +1);
+                else Scroller.ChangeView(null, Math.Max(0, Scroller.VerticalOffset + (back ? -1 : 1) * Scroller.ViewportHeight * 0.9), null, !Motion.Enabled);
+                break;
             case VirtualKey.PageDown or VirtualKey.Right or VirtualKey.Down when IsSinglePage && (e.Key == VirtualKey.PageDown || Scroller.ScrollableWidth < 1):
                 FlipPage(+1);
                 break;
@@ -386,7 +440,7 @@ public sealed partial class DocumentView
     /// </summary>
     private void UpdateVisiblePages()
     {
-        if (_pages.Count == 0 || _tops.Length != _pages.Count) return;
+        if (_suspended || _pages.Count == 0 || _tops.Length != _pages.Count) return;
         double stamp = CurrentStamp;
         if (IsSinglePage)
         {
@@ -401,8 +455,9 @@ public sealed partial class DocumentView
         {
             double factor = Math.Max(0.01, Scroller.ZoomFactor);
             double top = Scroller.VerticalOffset / factor, height = Math.Max(1, Scroller.ViewportHeight / factor);
-            double keepFrom = top - height, keepTo = top + 2 * height;
-            double dropFrom = top - 4 * height, dropTo = top + 5 * height;
+            // Render what is on screen plus a little ahead; free bitmaps once pages are well out of view.
+            double keepFrom = top - height * 0.5, keepTo = top + height * 1.5;
+            double dropFrom = top - height * 1.5, dropTo = top + height * 2.5;
             int current = -1;
             for (int i = 0; i < _pages.Count; i++)
             {
@@ -458,23 +513,33 @@ public sealed partial class DocumentView
                 bool needOverlays = page.HotspotVersion != version;
                 bool wantForm = _doc.HasForm;
 
-                var (pixels, notes, fields, links) = await Task.Run(() => (
-                    _doc.RenderPage(index, pw, ph),
-                    needOverlays ? _doc.GetAnnotations(index) : null,
-                    needOverlays && wantForm ? _doc.GetFormFields(index) : null,
-                    needOverlays ? _doc.GetLinks(index) : null));
-
-                if (_disposed || index >= _pages.Count || _pages[index] != page) continue;
-                var bitmap = new WriteableBitmap(pw, ph);
-                pixels.CopyTo(bitmap.PixelBuffer);
-                bitmap.Invalidate();
-                page.SetBitmap(bitmap, stamp);
-                if (notes is not null && version == _contentVersion)
+                byte[] pixels = BitmapPool.RentBuffer(pw * ph * 4);
+                try
                 {
-                    ShowNoteHotspots(page, notes, version);
-                    page.Links = links ?? [];
-                    page.FormFields = fields ?? [];
-                    ShowFormOverlays(page);
+                    var (notes, fields, links) = await Task.Run(() =>
+                    {
+                        _doc.RenderPage(index, pixels, pw, ph);
+                        return (needOverlays ? _doc.GetAnnotations(index) : null,
+                            needOverlays && wantForm ? _doc.GetFormFields(index) : null,
+                            needOverlays ? _doc.GetLinks(index) : null);
+                    });
+
+                    if (_disposed || _suspended || index >= _pages.Count || _pages[index] != page) continue;
+                    // Reuse the page's own bitmap when the size is unchanged (content edits), else a pooled one.
+                    var bitmap = page.Bitmap is { } own && own.PixelWidth == pw && own.PixelHeight == ph ? own : BitmapPool.Rent(pw, ph);
+                    BitmapPool.Fill(bitmap, pixels);
+                    page.SetBitmap(bitmap, stamp);
+                    if (notes is not null && version == _contentVersion)
+                    {
+                        ShowNoteHotspots(page, notes, version);
+                        page.Links = links ?? [];
+                        page.FormFields = fields ?? [];
+                        ShowFormOverlays(page);
+                    }
+                }
+                finally
+                {
+                    BitmapPool.ReturnBuffer(pixels);
                 }
             }
         }
@@ -488,6 +553,41 @@ public sealed partial class DocumentView
         }
     }
 
+    private bool _suspended;
+
+    /// <summary>
+    /// A tab in the background or a minimized window shows nothing, so it gives its page and
+    /// thumbnail images back; they are rendered again when it is shown.
+    /// </summary>
+    public void SetSuspended(bool suspended)
+    {
+        if (suspended == _suspended || _disposed) return;
+        _suspended = suspended;
+        if (suspended)
+        {
+            _renderQueue.Clear();
+            _thumbQueue.Clear();
+            foreach (var page in _pages) page.ClearBitmap();
+            foreach (var thumb in _thumbs)
+            {
+                thumb.Image = null;
+                thumb.IsRendering = false;
+            }
+            BitmapPool.Trim();
+        }
+        else
+        {
+            UpdateVisiblePages();
+            if (LeftPane.Visibility == Visibility.Visible)
+            {
+                for (int i = 0; i < _thumbs.Count; i++)
+                {
+                    if (ThumbList.ContainerFromIndex(i) is not null) QueueThumbnail(_thumbs[i]);
+                }
+            }
+        }
+    }
+
     // Navigation ------------------------------------------------------------------------------
 
     private void GoToPage(int index, PdfRect? target = null)
@@ -496,11 +596,15 @@ public sealed partial class DocumentView
         index = Math.Clamp(index, 0, _pages.Count - 1);
         if (IsSinglePage)
         {
+            int direction = Math.Sign(index - _currentPage);
             _currentPage = index;
             LayoutPages();
             Scroller.ChangeView(null, 0, null, true);
             UpdateVisiblePages();
             ShowStatusPill();
+            // Flipping slides the new page in from the side it comes from.
+            if (direction != 0) Motion.SlideIn(_pages[index], direction * 36);
+            BitmapPool.TrimWhenIdle();
             return;
         }
         double y = _tops[index] - 8;
@@ -509,7 +613,10 @@ public sealed partial class DocumentView
             var dip = _pages[index].ToDip(rect);
             y = _tops[index] + dip.Y - Scroller.ViewportHeight / 3;
         }
-        Scroller.ChangeView(null, Math.Max(0, y * Scroller.ZoomFactor), null, true);
+        // Nearby jumps scroll smoothly; far jumps (for example to the last page) are instant.
+        double to = Math.Max(0, y * Scroller.ZoomFactor);
+        bool animate = Motion.Enabled && Math.Abs(to - Scroller.VerticalOffset) < 4 * Scroller.ViewportHeight;
+        Scroller.ChangeView(null, to, null, !animate);
     }
 
     private void PrevPage_Click(object sender, RoutedEventArgs e) => GoToPage(_currentPage - 1);
@@ -532,6 +639,7 @@ public sealed partial class DocumentView
         if (show && _thumbs.Count != _pages.Count) BuildThumbnails();
         LeftPane.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         if (show) SyncThumbnail();
+        else foreach (var thumb in _thumbs) thumb.Image = null;
     }
 
     private int _reportedPage = -1;
@@ -540,7 +648,9 @@ public sealed partial class DocumentView
     private void SyncThumbnail()
     {
         if (LeftPane.Visibility != Visibility.Visible || _currentPage >= _thumbs.Count) return;
+        _syncingThumbnail = true;
         if (ThumbList.SelectedIndex != _currentPage) ThumbList.SelectedIndex = _currentPage;
+        _syncingThumbnail = false;
         ThumbList.ScrollIntoView(_thumbs[_currentPage]);
     }
 
@@ -567,12 +677,24 @@ public sealed partial class DocumentView
 
     private void ThumbList_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
-        if (!args.InRecycleQueue && args.Item is ThumbnailItem { Image: null } thumb) QueueThumbnail(thumb);
+        if (args.Item is not ThumbnailItem thumb) return;
+        // Only thumbnails in view keep their images.
+        if (args.InRecycleQueue) thumb.Image = null;
+        else if (thumb.Image is null) QueueThumbnail(thumb);
     }
 
     private void ThumbList_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is ThumbnailItem thumb) GoToPage(thumb.Index);
+    }
+
+    private bool _syncingThumbnail;
+
+    /// <summary>Arrow keys in the thumbnail list move through the document too.</summary>
+    private void ThumbList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingThumbnail || ThumbList.FocusState != FocusState.Keyboard) return;
+        if (ThumbList.SelectedItem is ThumbnailItem thumb && thumb.Index != _currentPage) GoToPage(thumb.Index);
     }
 
     private void QueueThumbnail(ThumbnailItem thumb)
@@ -593,14 +715,25 @@ public sealed partial class DocumentView
             {
                 var thumb = _thumbQueue.Dequeue();
                 int w = Math.Max(1, (int)(thumb.Width * RasterScale)), h = Math.Max(1, (int)(thumb.Height * RasterScale));
-                if (thumb.Index >= _doc.PageCount) continue;
-                byte[] pixels = await Task.Run(() => _doc.RenderPage(thumb.Index, w, h));
-                if (_disposed) return;
-                var bitmap = new WriteableBitmap(w, h);
-                pixels.CopyTo(bitmap.PixelBuffer);
-                bitmap.Invalidate();
-                thumb.Image = bitmap;
-                thumb.IsRendering = false;
+                if (thumb.Index >= _doc.PageCount || _suspended || LeftPane.Visibility != Visibility.Visible)
+                {
+                    thumb.IsRendering = false;
+                    continue;
+                }
+                byte[] pixels = BitmapPool.RentBuffer(w * h * 4);
+                try
+                {
+                    await Task.Run(() => _doc.RenderPage(thumb.Index, pixels, w, h));
+                    if (_disposed) return;
+                    var bitmap = new WriteableBitmap(w, h);
+                    BitmapPool.Fill(bitmap, pixels);
+                    thumb.Image = bitmap;
+                    thumb.IsRendering = false;
+                }
+                finally
+                {
+                    BitmapPool.ReturnBuffer(pixels);
+                }
             }
         }
         catch (Exception e) when (e is PdfException or ObjectDisposedException or ArgumentException)

@@ -140,12 +140,7 @@ public sealed partial class DocumentView
     private Button CreateSignatureField(PageView page, FormField field)
     {
         var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, HorizontalAlignment = HorizontalAlignment.Center };
-        content.Children.Add(new Image
-        {
-            Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/Icons/sign.png")),
-            Width = 16,
-            Height = 16,
-        });
+        content.Children.Add(new AppIcon { Icon = "sign", Size = 16 });
         content.Children.Add(new TextBlock { Text = "Sign here", Foreground = new SolidColorBrush(Colors.Black) });
         var button = new Button
         {
