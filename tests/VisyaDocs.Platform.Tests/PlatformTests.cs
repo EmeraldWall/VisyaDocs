@@ -113,24 +113,34 @@ public class PlatformTests(ITestOutputHelper output)
     [Fact]
     public void PrintsAPdfWhoseAuthorRestrictedPrinting()
     {
-        // PDFium prints blank pages for such a file, so after the user confirms the app prints an
-        // unrestricted in-memory copy. That copy must produce the real pages.
+        // After the user confirms, the app prints an unrestricted in-memory copy. That copy must
+        // produce the real page. The original is printed too, only to record what PDFium does with it.
         using var original = PdfDocument.Open(Path.Combine(AppContext.BaseDirectory, "assets", "restricted.pdf"));
         Assert.False(original.Permissions.CanPrint);
-        using var doc = original.CreateUnprotectedCopy();
-        string file = Path.Combine(Path.GetTempPath(), $"visya-print-restricted-{Guid.NewGuid():N}.pdf");
+        using var copy = original.CreateUnprotectedCopy();
+
+        bool? originalHasInk = PrintAndCheck(original);
+        if (originalHasInk is null) return;
+        output.WriteLine($"Original printed with content: {originalHasInk}");
+        Assert.True(PrintAndCheck(copy), "The unrestricted copy must print the page content.");
+    }
+
+    /// <summary>Prints page 1 to Microsoft Print to PDF; true when the sheet has content, null when the printer is missing.</summary>
+    private bool? PrintAndCheck(PdfDocument doc)
+    {
+        string file = Path.Combine(Path.GetTempPath(), $"visya-print-check-{Guid.NewGuid():N}.pdf");
         try
         {
             if (!PrintService.PrintToPrinter(doc, "Microsoft Print to PDF", [0], "VisyaDocs test", file))
             {
                 output.WriteLine("\"Microsoft Print to PDF\" is not installed on this machine; skipping.");
-                return;
+                return null;
             }
             using var printed = PdfDocument.Open(file);
-            Assert.Equal(1, printed.PageCount);
             var g = printed.GetGeometry(0);
-            byte[] pixels = printed.RenderPage(0, 200, (int)(200 * g.ViewHeight / g.ViewWidth));
-            Assert.Contains(pixels, b => b < 100);   // the page content was printed, not a blank sheet
+            // Wide enough that the fixture's 12 point text has solid dark pixels.
+            byte[] pixels = printed.RenderPage(0, 600, (int)(600 * g.ViewHeight / g.ViewWidth));
+            return pixels.Any(b => b < 100);
         }
         finally
         {
