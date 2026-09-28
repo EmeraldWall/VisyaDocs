@@ -54,6 +54,7 @@ public sealed partial class DocumentView : UserControl, IDisposable
         UpdateUndoRedo();
         UpdateLayoutMenu();
         SetRailCollapsed(AppSettings.Current.RailCollapsed);
+        PageArea.SizeChanged += (_, _) => PositionRail();
     }
 
     public event EventHandler? TitleChanged;
@@ -97,8 +98,7 @@ public sealed partial class DocumentView : UserControl, IDisposable
     public void OnFullScreenChanged(bool fullScreen)
     {
         _fullScreen = fullScreen;
-        FullScreenIcon.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(
-            new Uri(fullScreen ? "ms-appx:///Assets/Icons/fullscreen-exit.png" : "ms-appx:///Assets/Icons/fullscreen.png"));
+        FullScreenIcon.Icon = fullScreen ? "fullscreen-exit" : "fullscreen";
         SetRailCollapsed(fullScreen || AppSettings.Current.RailCollapsed);
     }
 
@@ -210,7 +210,7 @@ public sealed partial class DocumentView : UserControl, IDisposable
     private void SetRailCollapsed(bool collapsed)
     {
         RailItems.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
-        RailCollapseGlyph.Glyph = collapsed ? "\uE76C" : "\uE76B";
+        RailCollapseGlyph.Glyph = collapsed ? "\uE70D" : "\uE70E";
         ToolTipService.SetToolTip(RailCollapseButton, collapsed ? "Show tools" : "Hide tools");
     }
 

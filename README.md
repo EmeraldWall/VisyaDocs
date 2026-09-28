@@ -7,8 +7,8 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 ## Features
 
 **Reading first**
-- Thin title bar (the height of the window buttons) with compact document tabs and one menu
-- All tools live in a floating, rounded tool rail on the left that folds away to a small handle
+- Thin title bar (the height of the window buttons) with a File menu and compact document tabs that shrink and scroll instead of running under the window buttons
+- Reading and editing tools live in a floating, rounded tool bar that folds away to a small handle and can be dragged to either side. Pages are laid out around it, so it never covers them or the side panes
 - Page and zoom indicator that fades out while you read
 - Layouts: continuous scroll, two pages side by side, two pages with the cover alone, single page (flip with PageUp/PageDown, arrow keys or the wheel)
 - Pinch to zoom on touchpads and touch screens, Ctrl + wheel, Ctrl+plus/minus, fit width, fit page
@@ -37,9 +37,12 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 - Merge PDFs, append pages or images to an open document
 
 **Look and feel**
-- Theme: System, Light or Dark
+- Themes: System (follows Windows), Light, Dark, Black
   - Light is a soft grey instead of stark white, to reduce eye strain
-  - Dark uses pure black with dark grey panes, and optionally dims pages for night reading
+  - Dark is the Windows style dark grey; Black is pure black (great on OLED screens)
+  - Pages can be dimmed slightly in Dark and Black for night reading
+- Settings is a page inside the app (File > Settings), every change applies at once
+- Icons are vector (SVG) and render sharp at any display scale
 - Color icons in Microsoft's Fluent style (see Third party notices)
 - Custom app icon and .pdf file icon (sources in `assets/icon`)
 

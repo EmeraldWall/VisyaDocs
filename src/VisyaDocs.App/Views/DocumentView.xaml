@@ -45,13 +45,239 @@
                 </ListView.ItemTemplate>
             </ListView>
 
-            <ScrollViewer x:Name="Scroller" Grid.Column="1" Background="{ThemeResource VisyaCanvasBrush}"
-                          HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto"
-                          ZoomMode="Enabled" MinZoomFactor="0.2" MaxZoomFactor="8" IsTabStop="True"
-                          ViewChanged="Scroller_ViewChanged" SizeChanged="Scroller_SizeChanged">
-                <Canvas x:Name="PagesCanvas" />
-            </ScrollViewer>
+            <!-- Page area: the rail, search, notices and page pill float inside it only, never over the side panes. -->
+            <Grid x:Name="PageArea" Grid.Column="1">
+                <ScrollViewer x:Name="Scroller" Background="{ThemeResource VisyaCanvasBrush}"
+                              HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto"
+                              ZoomMode="Enabled" MinZoomFactor="0.2" MaxZoomFactor="8" IsTabStop="True"
+                              ViewChanged="Scroller_ViewChanged" SizeChanged="Scroller_SizeChanged">
+                    <Canvas x:Name="PagesCanvas" HorizontalAlignment="Center" />
+                </ScrollViewer>
+
+            <!-- Floating tool rail: rounded, vertically centered on the left, collapsible to a handle. -->
+            <Border x:Name="Rail" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12,12,0,12" SizeChanged="Rail_SizeChanged"
+                    Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1"
+                    CornerRadius="14" Padding="4" Translation="0,0,24">
+                <Border.Shadow>
+                    <ThemeShadow />
+                </Border.Shadow>
+                <ScrollViewer VerticalScrollBarVisibility="Hidden" VerticalScrollMode="Auto" HorizontalScrollMode="Disabled">
+                    <StackPanel Spacing="2">
+                        <!-- Grip: drag to move the tool bar to either side; the chevron folds it. -->
+                        <Grid x:Name="RailGrip" Height="30" Background="Transparent"
+                              PointerPressed="RailGrip_PointerPressed" PointerMoved="RailGrip_PointerMoved"
+                              PointerReleased="RailGrip_PointerReleased" ToolTipService.ToolTip="Drag to move">
+                            <StackPanel Orientation="Horizontal" Spacing="3" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,3,0,0" Opacity="0.45">
+                                <Ellipse Width="3" Height="3" Fill="{ThemeResource VisyaTextBrush}" />
+                                <Ellipse Width="3" Height="3" Fill="{ThemeResource VisyaTextBrush}" />
+                                <Ellipse Width="3" Height="3" Fill="{ThemeResource VisyaTextBrush}" />
+                            </StackPanel>
+                            <Button x:Name="RailCollapseButton" Style="{StaticResource RailButtonStyle}" Height="20" Width="32"
+                                    VerticalAlignment="Bottom" Click="RailCollapse_Click" ToolTipService.ToolTip="Hide tools">
+                                <FontIcon x:Name="RailCollapseGlyph" Glyph="&#xE70E;" FontSize="10" />
+                            </Button>
+                        </Grid>
+
+                        <StackPanel x:Name="RailItems" Spacing="2">
+                            <!-- Navigate and read -->
+                            <ToggleButton x:Name="ThumbsToggle" Style="{StaticResource RailToggleStyle}" Click="ThumbsToggle_Click" ToolTipService.ToolTip="Page thumbnails">
+                                <local:AppIcon Icon="thumbnails" />
+                            </ToggleButton>
+                            <Button Style="{StaticResource RailButtonStyle}" Click="SearchButton_Click" ToolTipService.ToolTip="Search (Ctrl+F)">
+                                <local:AppIcon Icon="search" />
+                            </Button>
+                            <Button x:Name="ViewButton" Style="{StaticResource RailButtonStyle}" ToolTipService.ToolTip="Page layout">
+                                <local:AppIcon x:Name="ViewButtonIcon" Icon="view-continuous" />
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="RightEdgeAlignedTop">
+                                        <RadioMenuFlyoutItem x:Name="LayoutContinuousItem" Text="Continuous scroll" GroupName="Layout" Tag="Continuous" Click="Layout_Click">
+                                            <RadioMenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/view-continuous.svg" /></RadioMenuFlyoutItem.Icon>
+                                        </RadioMenuFlyoutItem>
+                                        <RadioMenuFlyoutItem x:Name="LayoutTwoItem" Text="Two pages side by side" GroupName="Layout" Tag="TwoPages" Click="Layout_Click">
+                                            <RadioMenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/view-two-page.svg" /></RadioMenuFlyoutItem.Icon>
+                                        </RadioMenuFlyoutItem>
+                                        <RadioMenuFlyoutItem x:Name="LayoutCoverItem" Text="Two pages, cover alone" GroupName="Layout" Tag="TwoPagesCover" Click="Layout_Click">
+                                            <RadioMenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/view-two-page.svg" /></RadioMenuFlyoutItem.Icon>
+                                        </RadioMenuFlyoutItem>
+                                        <RadioMenuFlyoutItem x:Name="LayoutSingleItem" Text="Single page" GroupName="Layout" Tag="SinglePage" Click="Layout_Click">
+                                            <RadioMenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/view-single.svg" /></RadioMenuFlyoutItem.Icon>
+                                        </RadioMenuFlyoutItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                            <Button Style="{StaticResource RailButtonStyle}" ToolTipService.ToolTip="Zoom">
+                                <local:AppIcon Icon="zoom-in" />
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="RightEdgeAlignedTop">
+                                        <MenuFlyoutItem Text="Zoom in" Click="ZoomIn_Click" KeyboardAcceleratorTextOverride="Ctrl+Plus">
+                                            <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/zoom-in.svg" /></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Text="Zoom out" Click="ZoomOut_Click" KeyboardAcceleratorTextOverride="Ctrl+Minus">
+                                            <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/zoom-out.svg" /></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem Text="Fit width" Click="FitWidth_Click" KeyboardAcceleratorTextOverride="Ctrl+0">
+                                            <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/fit-width.svg" /></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Text="Fit page" Click="FitPage_Click">
+                                            <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/fit-page.svg" /></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem Text="50%" Tag="0.5" Click="ZoomPreset_Click" />
+                                        <MenuFlyoutItem Text="75%" Tag="0.75" Click="ZoomPreset_Click" />
+                                        <MenuFlyoutItem Text="100%" Tag="1" Click="ZoomPreset_Click" />
+                                        <MenuFlyoutItem Text="125%" Tag="1.25" Click="ZoomPreset_Click" />
+                                        <MenuFlyoutItem Text="150%" Tag="1.5" Click="ZoomPreset_Click" />
+                                        <MenuFlyoutItem Text="200%" Tag="2" Click="ZoomPreset_Click" />
+                                        <MenuFlyoutItem Text="300%" Tag="3" Click="ZoomPreset_Click" />
+                                        <MenuFlyoutItem Text="400%" Tag="4" Click="ZoomPreset_Click" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                            <Button Style="{StaticResource RailButtonStyle}" Click="FullScreen_Click" ToolTipService.ToolTip="Full screen (F11)">
+                                <local:AppIcon x:Name="FullScreenIcon" Icon="fullscreen" />
+                            </Button>
+
+                            <Rectangle Style="{StaticResource RailDividerStyle}" />
+
+                            <!-- Tools -->
+                            <ToggleButton x:Name="SelectTool" Style="{StaticResource RailToggleStyle}" Tag="Select" Click="Tool_Click" ToolTipService.ToolTip="Select and copy text">
+                                <local:AppIcon Icon="select" />
+                            </ToggleButton>
+                            <ToggleButton x:Name="EditTextTool" Style="{StaticResource RailToggleStyle}" Tag="EditText" Click="Tool_Click" ToolTipService.ToolTip="Edit text: click existing text to change it">
+                                <local:AppIcon Icon="edit-text" />
+                            </ToggleButton>
+                            <ToggleButton x:Name="AddTextTool" Style="{StaticResource RailToggleStyle}" Tag="AddText" Click="Tool_Click" ToolTipService.ToolTip="Add text: click where the text should go">
+                                <local:AppIcon Icon="add-text" />
+                            </ToggleButton>
+                            <ToggleButton x:Name="CommentTool" Style="{StaticResource RailToggleStyle}" Tag="Comment" Click="Tool_Click" ToolTipService.ToolTip="Add a comment">
+                                <local:AppIcon Icon="comment" />
+                            </ToggleButton>
+                            <ToggleButton x:Name="HighlightTool" Style="{StaticResource RailToggleStyle}" Tag="Highlight" Click="Tool_Click" ToolTipService.ToolTip="Highlight: drag across text">
+                                <local:AppIcon Icon="highlight" />
+                            </ToggleButton>
+                            <ToggleButton x:Name="SignTool" Style="{StaticResource RailToggleStyle}" Click="Sign_Click" ToolTipService.ToolTip="Sign the document">
+                                <local:AppIcon Icon="sign" />
+                            </ToggleButton>
+                            <ToggleButton x:Name="FormTool" Style="{StaticResource RailToggleStyle}" Tag="FillForm" Click="Tool_Click" ToolTipService.ToolTip="Fill form" Visibility="Collapsed">
+                                <local:AppIcon Icon="form" />
+                            </ToggleButton>
+
+                            <Rectangle Style="{StaticResource RailDividerStyle}" />
+
+                            <Button x:Name="UndoButton" Style="{StaticResource RailButtonStyle}" Click="Undo_Click" ToolTipService.ToolTip="Undo (Ctrl+Z)">
+                                <local:AppIcon Icon="undo" />
+                            </Button>
+                            <Button x:Name="RedoButton" Style="{StaticResource RailButtonStyle}" Click="Redo_Click" ToolTipService.ToolTip="Redo (Ctrl+Y)">
+                                <local:AppIcon Icon="redo" />
+                            </Button>
+                            <ToggleButton x:Name="CommentsToggle" Style="{StaticResource RailToggleStyle}" Click="CommentsToggle_Click" ToolTipService.ToolTip="Comments">
+                                <local:AppIcon Icon="comments" />
+                            </ToggleButton>
+
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Options for Add text, shown next to the rail while that tool is active. -->
+            <Border x:Name="TextOptions" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0" Visibility="Collapsed"
+                    Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1"
+                    CornerRadius="10" Padding="8,4" Translation="0,0,24">
+                <Border.Shadow><ThemeShadow /></Border.Shadow>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="Size" VerticalAlignment="Center" Opacity="0.7" />
+                    <ComboBox x:Name="FontSizeBox" Width="80" SelectedIndex="3">
+                        <x:String>8</x:String>
+                        <x:String>10</x:String>
+                        <x:String>11</x:String>
+                        <x:String>12</x:String>
+                        <x:String>14</x:String>
+                        <x:String>16</x:String>
+                        <x:String>18</x:String>
+                        <x:String>24</x:String>
+                        <x:String>32</x:String>
+                        <x:String>48</x:String>
+                    </ComboBox>
+                    <DropDownButton x:Name="ColorButton" ToolTipService.ToolTip="Text color">
+                        <Ellipse x:Name="ColorSwatch" Width="14" Height="14" Fill="Black" />
+                        <DropDownButton.Flyout>
+                            <MenuFlyout x:Name="ColorMenu" Placement="Bottom" />
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
+                </StackPanel>
+            </Border>
+
+            <!-- Floating search box. -->
+            <Border x:Name="SearchPanel" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,16,0" Visibility="Collapsed"
+                    Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1"
+                    CornerRadius="12" Padding="6" Translation="0,0,24">
+                <Border.Shadow><ThemeShadow /></Border.Shadow>
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <TextBox x:Name="SearchBox" Width="220" PlaceholderText="Search" KeyDown="SearchBox_KeyDown" />
+                    <Button Style="{StaticResource TitleBarButtonStyle}" ToolTipService.ToolTip="Previous match (Shift+Enter)" Click="SearchPrev_Click">
+                        <FontIcon Glyph="&#xE70E;" FontSize="12" />
+                    </Button>
+                    <Button Style="{StaticResource TitleBarButtonStyle}" ToolTipService.ToolTip="Next match (Enter)" Click="SearchNext_Click">
+                        <FontIcon Glyph="&#xE70D;" FontSize="12" />
+                    </Button>
+                    <TextBlock x:Name="SearchStatus" VerticalAlignment="Center" MinWidth="56" Opacity="0.75" Margin="4,0" />
+                    <Button Style="{StaticResource TitleBarButtonStyle}" ToolTipService.ToolTip="Close search (Esc)" Click="SearchClose_Click">
+                        <FontIcon Glyph="&#xE711;" FontSize="11" />
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- Notifications and progress, floating at the top center. -->
+            <StackPanel x:Name="NoticeStack" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="80,12,80,0" MaxWidth="620" Spacing="6">
+                <InfoBar x:Name="ScanBar" Severity="Informational" IsOpen="False" Title="Scanned document"
+                         Message="Some pages have no text. Run OCR to make them searchable and copyable.">
+                    <InfoBar.ActionButton>
+                        <Button Content="Make searchable" Click="MakeSearchable_Click" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
+                <InfoBar x:Name="FormBar" Severity="Informational" IsOpen="False" Title="This document has a form"
+                         Message="Click a field to fill it in. Save to keep your entries." />
+                <InfoBar x:Name="MessageBar" IsOpen="False" />
+                <Border x:Name="ProgressPanel" Visibility="Collapsed" Padding="12,8" CornerRadius="10"
+                        Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" MinWidth="160" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="ProgressText" VerticalAlignment="Center" />
+                        <ProgressBar x:Name="Progress" Grid.Column="1" Maximum="1" VerticalAlignment="Center" />
+                        <Button Grid.Column="2" Content="Cancel" Click="CancelOperation_Click" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <!-- Page and zoom pill: fades out while reading, returns on scroll or hover. -->
+            <Border x:Name="StatusPill" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,16"
+                    Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1"
+                    CornerRadius="16" Padding="10,4" Translation="0,0,24" PointerEntered="StatusPill_PointerEntered">
+                <Border.OpacityTransition>
+                    <ScalarTransition Duration="0:0:0.3" />
+                </Border.OpacityTransition>
+                <Border.Shadow><ThemeShadow /></Border.Shadow>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Style="{StaticResource TitleBarButtonStyle}" Width="28" Click="PrevPage_Click" ToolTipService.ToolTip="Previous page">
+                        <FontIcon Glyph="&#xE76B;" FontSize="11" />
+                    </Button>
+                    <TextBox x:Name="PageBox" Width="48" MinHeight="0" Padding="4,2" TextAlignment="Center" VerticalAlignment="Center"
+                             KeyDown="PageBox_KeyDown" ToolTipService.ToolTip="Go to page" />
+                    <TextBlock x:Name="PageCountText" VerticalAlignment="Center" Opacity="0.75" />
+                    <Button Style="{StaticResource TitleBarButtonStyle}" Width="28" Click="NextPage_Click" ToolTipService.ToolTip="Next page">
+                        <FontIcon Glyph="&#xE76C;" FontSize="11" />
+                    </Button>
+                    <Rectangle Width="1" Height="16" Fill="{ThemeResource VisyaBorderBrush}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="ZoomText" VerticalAlignment="Center" MinWidth="40" TextAlignment="Center" Opacity="0.75" />
+                </StackPanel>
+            </Border>
+            </Grid>
 
             <!-- Side pane: comments or extracted text. -->
             <Grid x:Name="SidePane" Grid.Column="2" Width="330" Visibility="Collapsed" Background="{ThemeResource VisyaPaneBrush}"
@@ -109,13 +335,13 @@
                         <Button Content="Copy" Click="CopyExtracted_Click" />
                         <Button Click="SaveExtractedText_Click">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="ms-appx:///Assets/Icons/text.png" Width="16" Height="16" />
+                                <local:AppIcon Icon="text" Size="16" />
                                 <TextBlock Text=".txt" />
                             </StackPanel>
                         </Button>
                         <Button Click="SaveExtractedWord_Click">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="ms-appx:///Assets/Icons/word.png" Width="16" Height="16" />
+                                <local:AppIcon Icon="word" Size="16" />
                                 <TextBlock Text=".docx" />
                             </StackPanel>
                         </Button>
@@ -124,273 +350,5 @@
             </Grid>
         </Grid>
 
-        <!-- Floating tool rail: rounded, vertically centered on the left, collapsible to a handle. -->
-        <Border x:Name="Rail" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,12,0,12"
-                Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1"
-                CornerRadius="14" Padding="4" Translation="0,0,24">
-            <Border.Shadow>
-                <ThemeShadow />
-            </Border.Shadow>
-            <ScrollViewer VerticalScrollBarVisibility="Hidden" VerticalScrollMode="Auto" HorizontalScrollMode="Disabled">
-                <StackPanel Spacing="2">
-                    <Button x:Name="RailCollapseButton" Style="{StaticResource RailButtonStyle}" Height="28" Click="RailCollapse_Click"
-                            ToolTipService.ToolTip="Hide tools">
-                        <FontIcon x:Name="RailCollapseGlyph" Glyph="&#xE76B;" FontSize="12" />
-                    </Button>
-
-                    <StackPanel x:Name="RailItems" Spacing="2">
-                        <!-- Navigate and read -->
-                        <ToggleButton x:Name="ThumbsToggle" Style="{StaticResource RailToggleStyle}" Click="ThumbsToggle_Click" ToolTipService.ToolTip="Page thumbnails">
-                            <Image Source="ms-appx:///Assets/Icons/thumbnails.png" Style="{StaticResource RailIconStyle}" />
-                        </ToggleButton>
-                        <Button Style="{StaticResource RailButtonStyle}" Click="SearchButton_Click" ToolTipService.ToolTip="Search (Ctrl+F)">
-                            <Image Source="ms-appx:///Assets/Icons/search.png" Style="{StaticResource RailIconStyle}" />
-                        </Button>
-                        <Button x:Name="ViewButton" Style="{StaticResource RailButtonStyle}" ToolTipService.ToolTip="Page layout">
-                            <Image x:Name="ViewButtonIcon" Source="ms-appx:///Assets/Icons/view-continuous.png" Style="{StaticResource RailIconStyle}" />
-                            <Button.Flyout>
-                                <MenuFlyout Placement="RightEdgeAlignedTop">
-                                    <RadioMenuFlyoutItem x:Name="LayoutContinuousItem" Text="Continuous scroll" GroupName="Layout" Tag="Continuous" Click="Layout_Click">
-                                        <RadioMenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/view-continuous.png" /></RadioMenuFlyoutItem.Icon>
-                                    </RadioMenuFlyoutItem>
-                                    <RadioMenuFlyoutItem x:Name="LayoutTwoItem" Text="Two pages side by side" GroupName="Layout" Tag="TwoPages" Click="Layout_Click">
-                                        <RadioMenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/view-two-page.png" /></RadioMenuFlyoutItem.Icon>
-                                    </RadioMenuFlyoutItem>
-                                    <RadioMenuFlyoutItem x:Name="LayoutCoverItem" Text="Two pages, cover alone" GroupName="Layout" Tag="TwoPagesCover" Click="Layout_Click">
-                                        <RadioMenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/view-two-page.png" /></RadioMenuFlyoutItem.Icon>
-                                    </RadioMenuFlyoutItem>
-                                    <RadioMenuFlyoutItem x:Name="LayoutSingleItem" Text="Single page" GroupName="Layout" Tag="SinglePage" Click="Layout_Click">
-                                        <RadioMenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/view-single.png" /></RadioMenuFlyoutItem.Icon>
-                                    </RadioMenuFlyoutItem>
-                                </MenuFlyout>
-                            </Button.Flyout>
-                        </Button>
-                        <Button Style="{StaticResource RailButtonStyle}" ToolTipService.ToolTip="Zoom">
-                            <Image Source="ms-appx:///Assets/Icons/zoom-in.png" Style="{StaticResource RailIconStyle}" />
-                            <Button.Flyout>
-                                <MenuFlyout Placement="RightEdgeAlignedTop">
-                                    <MenuFlyoutItem Text="Zoom in" Click="ZoomIn_Click" KeyboardAcceleratorTextOverride="Ctrl+Plus">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/zoom-in.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Zoom out" Click="ZoomOut_Click" KeyboardAcceleratorTextOverride="Ctrl+Minus">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/zoom-out.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem Text="Fit width" Click="FitWidth_Click" KeyboardAcceleratorTextOverride="Ctrl+0">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/fit-width.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Fit page" Click="FitPage_Click">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/fit-page.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem Text="50%" Tag="0.5" Click="ZoomPreset_Click" />
-                                    <MenuFlyoutItem Text="75%" Tag="0.75" Click="ZoomPreset_Click" />
-                                    <MenuFlyoutItem Text="100%" Tag="1" Click="ZoomPreset_Click" />
-                                    <MenuFlyoutItem Text="125%" Tag="1.25" Click="ZoomPreset_Click" />
-                                    <MenuFlyoutItem Text="150%" Tag="1.5" Click="ZoomPreset_Click" />
-                                    <MenuFlyoutItem Text="200%" Tag="2" Click="ZoomPreset_Click" />
-                                    <MenuFlyoutItem Text="300%" Tag="3" Click="ZoomPreset_Click" />
-                                    <MenuFlyoutItem Text="400%" Tag="4" Click="ZoomPreset_Click" />
-                                </MenuFlyout>
-                            </Button.Flyout>
-                        </Button>
-                        <Button Style="{StaticResource RailButtonStyle}" Click="FullScreen_Click" ToolTipService.ToolTip="Full screen (F11)">
-                            <Image x:Name="FullScreenIcon" Source="ms-appx:///Assets/Icons/fullscreen.png" Style="{StaticResource RailIconStyle}" />
-                        </Button>
-
-                        <Rectangle Style="{StaticResource RailDividerStyle}" />
-
-                        <!-- Tools -->
-                        <ToggleButton x:Name="SelectTool" Style="{StaticResource RailToggleStyle}" Tag="Select" Click="Tool_Click" ToolTipService.ToolTip="Select and copy text">
-                            <Image Source="ms-appx:///Assets/Icons/select.png" Style="{StaticResource RailIconStyle}" />
-                        </ToggleButton>
-                        <ToggleButton x:Name="EditTextTool" Style="{StaticResource RailToggleStyle}" Tag="EditText" Click="Tool_Click" ToolTipService.ToolTip="Edit text: click existing text to change it">
-                            <Image Source="ms-appx:///Assets/Icons/edit-text.png" Style="{StaticResource RailIconStyle}" />
-                        </ToggleButton>
-                        <ToggleButton x:Name="AddTextTool" Style="{StaticResource RailToggleStyle}" Tag="AddText" Click="Tool_Click" ToolTipService.ToolTip="Add text: click where the text should go">
-                            <Image Source="ms-appx:///Assets/Icons/add-text.png" Style="{StaticResource RailIconStyle}" />
-                        </ToggleButton>
-                        <ToggleButton x:Name="CommentTool" Style="{StaticResource RailToggleStyle}" Tag="Comment" Click="Tool_Click" ToolTipService.ToolTip="Add a comment">
-                            <Image Source="ms-appx:///Assets/Icons/comment.png" Style="{StaticResource RailIconStyle}" />
-                        </ToggleButton>
-                        <ToggleButton x:Name="HighlightTool" Style="{StaticResource RailToggleStyle}" Tag="Highlight" Click="Tool_Click" ToolTipService.ToolTip="Highlight: drag across text">
-                            <Image Source="ms-appx:///Assets/Icons/highlight.png" Style="{StaticResource RailIconStyle}" />
-                        </ToggleButton>
-                        <ToggleButton x:Name="SignTool" Style="{StaticResource RailToggleStyle}" Click="Sign_Click" ToolTipService.ToolTip="Sign the document">
-                            <Image Source="ms-appx:///Assets/Icons/sign.png" Style="{StaticResource RailIconStyle}" />
-                        </ToggleButton>
-                        <ToggleButton x:Name="FormTool" Style="{StaticResource RailToggleStyle}" Tag="FillForm" Click="Tool_Click" ToolTipService.ToolTip="Fill form" Visibility="Collapsed">
-                            <Image Source="ms-appx:///Assets/Icons/form.png" Style="{StaticResource RailIconStyle}" />
-                        </ToggleButton>
-
-                        <Rectangle Style="{StaticResource RailDividerStyle}" />
-
-                        <Button x:Name="UndoButton" Style="{StaticResource RailButtonStyle}" Click="Undo_Click" ToolTipService.ToolTip="Undo (Ctrl+Z)">
-                            <Image Source="ms-appx:///Assets/Icons/undo.png" Style="{StaticResource RailIconStyle}" />
-                        </Button>
-                        <Button x:Name="RedoButton" Style="{StaticResource RailButtonStyle}" Click="Redo_Click" ToolTipService.ToolTip="Redo (Ctrl+Y)">
-                            <Image Source="ms-appx:///Assets/Icons/redo.png" Style="{StaticResource RailIconStyle}" />
-                        </Button>
-                        <ToggleButton x:Name="CommentsToggle" Style="{StaticResource RailToggleStyle}" Click="CommentsToggle_Click" ToolTipService.ToolTip="Comments">
-                            <Image Source="ms-appx:///Assets/Icons/comments.png" Style="{StaticResource RailIconStyle}" />
-                        </ToggleButton>
-
-                        <Rectangle Style="{StaticResource RailDividerStyle}" />
-
-                        <!-- Grouped menus -->
-                        <Button Style="{StaticResource RailButtonStyle}" ToolTipService.ToolTip="File">
-                            <Image Source="ms-appx:///Assets/Icons/file.png" Style="{StaticResource RailIconStyle}" />
-                            <Button.Flyout>
-                                <MenuFlyout Placement="RightEdgeAlignedBottom">
-                                    <MenuFlyoutItem Text="Save" Click="Save_Click" KeyboardAcceleratorTextOverride="Ctrl+S">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/save.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Save as..." Click="SaveAs_Click" KeyboardAcceleratorTextOverride="Ctrl+Shift+S">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/save.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Print..." Click="Print_Click" KeyboardAcceleratorTextOverride="Ctrl+P">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/print.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem Text="Properties" Click="Properties_Click" KeyboardAcceleratorTextOverride="Ctrl+D">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/properties.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                </MenuFlyout>
-                            </Button.Flyout>
-                        </Button>
-                        <Button Style="{StaticResource RailButtonStyle}" ToolTipService.ToolTip="Convert and OCR">
-                            <Image Source="ms-appx:///Assets/Icons/convert.png" Style="{StaticResource RailIconStyle}" />
-                            <Button.Flyout>
-                                <MenuFlyout Placement="RightEdgeAlignedBottom">
-                                    <MenuFlyoutItem Text="Make searchable (OCR)" Click="MakeSearchable_Click">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/ocr.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Extract text" Click="ExtractText_Click">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/extract-text.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem Text="Export to Word" Click="ExportWord_Click">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/word.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Export to text" Click="ExportText_Click">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/text.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Export pages as PNG" Tag="Png" Click="ExportImages_Click">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/images.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Export pages as JPEG" Tag="Jpeg" Click="ExportImages_Click">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/images.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem Text="Append PDF..." Click="AppendPdf_Click">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/merge.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Append images..." Click="AppendImages_Click">
-                                        <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/append-images.png" /></MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                </MenuFlyout>
-                            </Button.Flyout>
-                        </Button>
-                    </StackPanel>
-                </StackPanel>
-            </ScrollViewer>
-        </Border>
-
-        <!-- Options for Add text, shown next to the rail while that tool is active. -->
-        <Border x:Name="TextOptions" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="72,12,0,0" Visibility="Collapsed"
-                Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1"
-                CornerRadius="10" Padding="8,4" Translation="0,0,24">
-            <Border.Shadow><ThemeShadow /></Border.Shadow>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="Size" VerticalAlignment="Center" Opacity="0.7" />
-                <ComboBox x:Name="FontSizeBox" Width="80" SelectedIndex="3">
-                    <x:String>8</x:String>
-                    <x:String>10</x:String>
-                    <x:String>11</x:String>
-                    <x:String>12</x:String>
-                    <x:String>14</x:String>
-                    <x:String>16</x:String>
-                    <x:String>18</x:String>
-                    <x:String>24</x:String>
-                    <x:String>32</x:String>
-                    <x:String>48</x:String>
-                </ComboBox>
-                <DropDownButton x:Name="ColorButton" ToolTipService.ToolTip="Text color">
-                    <Ellipse x:Name="ColorSwatch" Width="14" Height="14" Fill="Black" />
-                    <DropDownButton.Flyout>
-                        <MenuFlyout x:Name="ColorMenu" Placement="Bottom" />
-                    </DropDownButton.Flyout>
-                </DropDownButton>
-            </StackPanel>
-        </Border>
-
-        <!-- Floating search box. -->
-        <Border x:Name="SearchPanel" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,16,0" Visibility="Collapsed"
-                Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1"
-                CornerRadius="12" Padding="6" Translation="0,0,24">
-            <Border.Shadow><ThemeShadow /></Border.Shadow>
-            <StackPanel Orientation="Horizontal" Spacing="2">
-                <TextBox x:Name="SearchBox" Width="220" PlaceholderText="Search" KeyDown="SearchBox_KeyDown" />
-                <Button Style="{StaticResource TitleBarButtonStyle}" ToolTipService.ToolTip="Previous match (Shift+Enter)" Click="SearchPrev_Click">
-                    <FontIcon Glyph="&#xE70E;" FontSize="12" />
-                </Button>
-                <Button Style="{StaticResource TitleBarButtonStyle}" ToolTipService.ToolTip="Next match (Enter)" Click="SearchNext_Click">
-                    <FontIcon Glyph="&#xE70D;" FontSize="12" />
-                </Button>
-                <TextBlock x:Name="SearchStatus" VerticalAlignment="Center" MinWidth="56" Opacity="0.75" Margin="4,0" />
-                <Button Style="{StaticResource TitleBarButtonStyle}" ToolTipService.ToolTip="Close search (Esc)" Click="SearchClose_Click">
-                    <FontIcon Glyph="&#xE711;" FontSize="11" />
-                </Button>
-            </StackPanel>
-        </Border>
-
-        <!-- Notifications and progress, floating at the top center. -->
-        <StackPanel x:Name="NoticeStack" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="80,12,80,0" MaxWidth="620" Spacing="6">
-            <InfoBar x:Name="ScanBar" Severity="Informational" IsOpen="False" Title="Scanned document"
-                     Message="Some pages have no text. Run OCR to make them searchable and copyable.">
-                <InfoBar.ActionButton>
-                    <Button Content="Make searchable" Click="MakeSearchable_Click" />
-                </InfoBar.ActionButton>
-            </InfoBar>
-            <InfoBar x:Name="FormBar" Severity="Informational" IsOpen="False" Title="This document has a form"
-                     Message="Click a field to fill it in. Save to keep your entries." />
-            <InfoBar x:Name="MessageBar" IsOpen="False" />
-            <Border x:Name="ProgressPanel" Visibility="Collapsed" Padding="12,8" CornerRadius="10"
-                    Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1">
-                <Grid ColumnSpacing="12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" MinWidth="160" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="ProgressText" VerticalAlignment="Center" />
-                    <ProgressBar x:Name="Progress" Grid.Column="1" Maximum="1" VerticalAlignment="Center" />
-                    <Button Grid.Column="2" Content="Cancel" Click="CancelOperation_Click" />
-                </Grid>
-            </Border>
-        </StackPanel>
-
-        <!-- Page and zoom pill: fades out while reading, returns on scroll or hover. -->
-        <Border x:Name="StatusPill" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,16"
-                Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1"
-                CornerRadius="16" Padding="10,4" Translation="0,0,24" PointerEntered="StatusPill_PointerEntered">
-            <Border.OpacityTransition>
-                <ScalarTransition Duration="0:0:0.3" />
-            </Border.OpacityTransition>
-            <Border.Shadow><ThemeShadow /></Border.Shadow>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Style="{StaticResource TitleBarButtonStyle}" Width="28" Click="PrevPage_Click" ToolTipService.ToolTip="Previous page">
-                    <FontIcon Glyph="&#xE76B;" FontSize="11" />
-                </Button>
-                <TextBox x:Name="PageBox" Width="48" MinHeight="0" Padding="4,2" TextAlignment="Center" VerticalAlignment="Center"
-                         KeyDown="PageBox_KeyDown" ToolTipService.ToolTip="Go to page" />
-                <TextBlock x:Name="PageCountText" VerticalAlignment="Center" Opacity="0.75" />
-                <Button Style="{StaticResource TitleBarButtonStyle}" Width="28" Click="NextPage_Click" ToolTipService.ToolTip="Next page">
-                    <FontIcon Glyph="&#xE76C;" FontSize="11" />
-                </Button>
-                <Rectangle Width="1" Height="16" Fill="{ThemeResource VisyaBorderBrush}" VerticalAlignment="Center" />
-                <TextBlock x:Name="ZoomText" VerticalAlignment="Center" MinWidth="40" TextAlignment="Center" Opacity="0.75" />
-            </StackPanel>
-        </Border>
     </Grid>
 </UserControl>

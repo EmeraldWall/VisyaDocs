@@ -16,6 +16,13 @@ public enum AppTheme
     System,
     Light,
     Dark,
+    Black,
+}
+
+public enum RailSide
+{
+    Left,
+    Right,
 }
 
 /// <summary>User preferences, stored as JSON in %LocalAppData%\VisyaDocs\settings.json.</summary>
@@ -46,6 +53,12 @@ public sealed class AppSettings
 
     /// <summary>Whether the floating tool rail is collapsed to its handle.</summary>
     public bool RailCollapsed { get; set; }
+
+    /// <summary>Side of the page area the tool rail is docked to.</summary>
+    public RailSide RailSide { get; set; } = RailSide.Left;
+
+    /// <summary>Vertical position of the tool rail as a fraction of the free space (0 top, 0.5 centered).</summary>
+    public double RailTop { get; set; } = 0.5;
 
     public static string SignaturesFolder { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VisyaDocs", "signatures");

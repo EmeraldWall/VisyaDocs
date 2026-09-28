@@ -108,10 +108,13 @@ def main() -> None:
     if len(sys.argv) > 1:
         vendor(Path(sys.argv[1]))
     OUT.mkdir(parents=True, exist_ok=True)
-    for old in OUT.glob("*.png"):
+    for old in [*OUT.glob("*.png"), *OUT.glob("*.svg")]:
         old.unlink()
     for name, (icon, style) in ICONS.items():
-        svg = svg_for(icon, style).encode()
+        text = svg_for(icon, style)
+        # The SVG is what the app shows (vector, sharp at any scale); PNGs are a fallback.
+        (OUT / f"{name}.svg").write_text(text)
+        svg = text.encode()
         for scale, factor in SCALES.items():
             size = round(BASE * factor)
             file = f"{name}.png" if scale is None else f"{name}.scale-{scale}.png"
