@@ -3,6 +3,7 @@ using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media.Animation;
 using VisyaDocs.App.Services;
 using VisyaDocs.Core;
 using Windows.System;
@@ -55,6 +56,21 @@ public sealed partial class DocumentView : UserControl, IDisposable
         UpdateLayoutMenu();
         SetRailCollapsed(AppSettings.Current.RailCollapsed);
         PageArea.SizeChanged += (_, _) => PositionRail();
+        SetUpMotion();
+    }
+
+    /// <summary>Panels fade and slide in and out instead of popping (skipped when Windows animations are off).</summary>
+    private void SetUpMotion()
+    {
+        Motion.ShowHide(LeftPane, dx: -20);
+        Motion.ShowHide(SidePane, dx: 24);
+        Motion.ShowHide(SearchPanel, dy: -10);
+        Motion.ShowHide(TextOptions, dy: -10);
+        Motion.ShowHide(RailItems, dy: -8);
+        Motion.ShowHide(ProgressPanel, dy: -8);
+        Motion.ShowHide(OutlineTree);
+        Motion.ShowHide(ThumbList);
+        if (Motion.Enabled) Rail.Transitions = [new RepositionThemeTransition()];
     }
 
     public event EventHandler? TitleChanged;
@@ -242,11 +258,33 @@ public sealed partial class DocumentView : UserControl, IDisposable
         int version = ++_pillVersion;
         _ = Task.Delay(2500).ContinueWith(_ => _dispatcher.TryEnqueue(() =>
         {
-            if (version == _pillVersion && PageBox.FocusState == FocusState.Unfocused) StatusPill.Opacity = 0.0;
+            if (version == _pillVersion && !_pillHasFocus) StatusPill.Opacity = 0.0;
         }));
     }
 
     private void StatusPill_PointerEntered(object sender, PointerRoutedEventArgs e) => ShowStatusPill();
+
+    // The pill stays visible while the keyboard is on it (Tab or Ctrl+G).
+    private bool _pillHasFocus;
+
+    private void StatusPill_GotFocus(object sender, RoutedEventArgs e)
+    {
+        _pillHasFocus = true;
+        ShowStatusPill();
+    }
+
+    private void StatusPill_LostFocus(object sender, RoutedEventArgs e)
+    {
+        _pillHasFocus = false;
+        ShowStatusPill();
+    }
+
+    private void GoToPageAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        PageBox.Focus(FocusState.Keyboard);
+        PageBox.SelectAll();
+    }
 
     private void Root_PointerMoved(object sender, PointerRoutedEventArgs e)
     {
@@ -458,7 +496,7 @@ public sealed partial class DocumentView : UserControl, IDisposable
     private void FitWidthAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         args.Handled = true;
-        SetZoom(FitWidthZoom(), ZoomKind.FitWidth);
+        ZoomSmoothly(FitWidthZoom(), ZoomKind.FitWidth);
     }
 
     private void EscapeAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
@@ -469,6 +507,7 @@ public sealed partial class DocumentView : UserControl, IDisposable
         else if (_selection is not null) ClearSelection();
         else if (SearchPanel.Visibility == Visibility.Visible) CloseSearch();
         else if (_fullScreen) App.MainWindow.SetFullScreen(false);
+        else if (!IsFocusWithin(Scroller)) FocusViewer();
         else args.Handled = false;
     }
 

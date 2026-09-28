@@ -13,6 +13,8 @@
             <KeyboardAccelerator Modifiers="Control" Key="Tab" Invoked="NextTabAccelerator_Invoked" />
             <KeyboardAccelerator Key="F11" Invoked="FullScreenAccelerator_Invoked" />
             <KeyboardAccelerator Key="F1" Invoked="ShortcutsAccelerator_Invoked" />
+            <KeyboardAccelerator Key="F6" Invoked="NextRegionAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Shift" Key="F6" Invoked="PreviousRegionAccelerator_Invoked" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition x:Name="TitleRow" Height="32" />
@@ -20,10 +22,10 @@
         </Grid.RowDefinitions>
 
         <!--
-          Title bar: exactly the height of the caption buttons. The whole row is the drag area;
+          Title bar: exactly the height of the caption buttons. The row is the caption (drag) region;
           tabs and the menu button are carved out as clickable (pass-through) regions in code.
         -->
-        <Grid x:Name="AppTitleBar" Background="Transparent">
+        <Grid x:Name="AppTitleBar" Background="Transparent" DoubleTapped="AppTitleBar_DoubleTapped">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -35,83 +37,82 @@
             <Image Source="ms-appx:///Assets/AppLogoSmall.svg" Width="16" Height="16" Margin="12,0,8,0" VerticalAlignment="Center" />
 
             <Button x:Name="MenuButton" Grid.Column="1" Height="28" Padding="8,0" VerticalAlignment="Center"
-                    Background="Transparent" BorderThickness="0" CornerRadius="6" ToolTipService.ToolTip="File menu">
+                    Background="Transparent" BorderThickness="0" CornerRadius="6" ToolTipService.ToolTip="Menu (Alt, M)" AccessKey="M">
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                    <local:AppIcon Icon="file" Size="16" />
-                    <TextBlock Text="File" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Text="Menu" FontSize="12" VerticalAlignment="Center" />
                     <FontIcon Glyph="&#xE70D;" FontSize="8" VerticalAlignment="Center" Opacity="0.7" />
                 </StackPanel>
                 <Button.Flyout>
                     <MenuFlyout x:Name="AppMenu" Placement="BottomEdgeAlignedLeft" Opening="AppMenu_Opening">
-                        <MenuFlyoutItem Text="Open..." Click="Open_Click" KeyboardAcceleratorTextOverride="Ctrl+O">
-                            <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/open.svg" /></MenuFlyoutItem.Icon>
+                        <MenuFlyoutItem Text="Open..." Click="Open_Click" AccessKey="O" KeyboardAcceleratorTextOverride="Ctrl+O">
+                            <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.open}" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutSubItem x:Name="RecentMenu" Text="Open recent">
-                            <MenuFlyoutSubItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/recent.svg" /></MenuFlyoutSubItem.Icon>
+                        <MenuFlyoutSubItem x:Name="RecentMenu" Text="Open recent" AccessKey="R">
+                            <MenuFlyoutSubItem.Icon><ImageIcon Source="{ThemeResource Icon.recent}" /></MenuFlyoutSubItem.Icon>
                         </MenuFlyoutSubItem>
-                        <MenuFlyoutSubItem Text="Create">
-                            <MenuFlyoutSubItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/create.svg" /></MenuFlyoutSubItem.Icon>
+                        <MenuFlyoutSubItem Text="Create" AccessKey="N">
+                            <MenuFlyoutSubItem.Icon><ImageIcon Source="{ThemeResource Icon.create}" /></MenuFlyoutSubItem.Icon>
                             <MenuFlyoutItem Text="PDF from images..." Click="ImagesToPdf_Click">
-                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/append-images.svg" /></MenuFlyoutItem.Icon>
+                                <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.append-images}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                             <MenuFlyoutItem Text="Merge PDFs..." Click="MergePdfs_Click">
-                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/merge.svg" /></MenuFlyoutItem.Icon>
+                                <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.merge}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                         </MenuFlyoutSubItem>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem x:Name="SaveItem" Text="Save" Tag="Save" Click="DocCommand_Click" KeyboardAcceleratorTextOverride="Ctrl+S">
-                            <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/save.svg" /></MenuFlyoutItem.Icon>
+                        <MenuFlyoutItem x:Name="SaveItem" Text="Save" Tag="Save" AccessKey="S" Click="DocCommand_Click" KeyboardAcceleratorTextOverride="Ctrl+S">
+                            <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.save}" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutItem x:Name="SaveAsItem" Text="Save as..." Tag="SaveAs" Click="DocCommand_Click" KeyboardAcceleratorTextOverride="Ctrl+Shift+S">
-                            <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/save.svg" /></MenuFlyoutItem.Icon>
+                        <MenuFlyoutItem x:Name="SaveAsItem" Text="Save as..." Tag="SaveAs" AccessKey="A" Click="DocCommand_Click" KeyboardAcceleratorTextOverride="Ctrl+Shift+S">
+                            <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.save}" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutItem x:Name="PrintItem" Text="Print..." Tag="Print" Click="DocCommand_Click" KeyboardAcceleratorTextOverride="Ctrl+P">
-                            <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/print.svg" /></MenuFlyoutItem.Icon>
+                        <MenuFlyoutItem x:Name="PrintItem" Text="Print..." Tag="Print" AccessKey="P" Click="DocCommand_Click" KeyboardAcceleratorTextOverride="Ctrl+P">
+                            <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.print}" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutSubItem x:Name="ConvertMenu" Text="Convert">
-                            <MenuFlyoutSubItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/convert.svg" /></MenuFlyoutSubItem.Icon>
+                        <MenuFlyoutSubItem x:Name="ConvertMenu" Text="Convert" AccessKey="C">
+                            <MenuFlyoutSubItem.Icon><ImageIcon Source="{ThemeResource Icon.convert}" /></MenuFlyoutSubItem.Icon>
                             <MenuFlyoutItem Text="Make searchable (OCR)" Tag="Ocr" Click="DocCommand_Click">
-                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/ocr.svg" /></MenuFlyoutItem.Icon>
+                                <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.ocr}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                             <MenuFlyoutItem Text="Extract text" Tag="ExtractText" Click="DocCommand_Click">
-                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/extract-text.svg" /></MenuFlyoutItem.Icon>
+                                <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.extract-text}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                             <MenuFlyoutSeparator />
                             <MenuFlyoutItem Text="Export to Word..." Tag="ExportWord" Click="DocCommand_Click">
-                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/word.svg" /></MenuFlyoutItem.Icon>
+                                <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.word}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                             <MenuFlyoutItem Text="Export to text..." Tag="ExportText" Click="DocCommand_Click">
-                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/text.svg" /></MenuFlyoutItem.Icon>
+                                <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.text}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                             <MenuFlyoutItem Text="Export pages as PNG..." Tag="ExportPng" Click="DocCommand_Click">
-                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/images.svg" /></MenuFlyoutItem.Icon>
+                                <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.images}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                             <MenuFlyoutItem Text="Export pages as JPEG..." Tag="ExportJpeg" Click="DocCommand_Click">
-                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/images.svg" /></MenuFlyoutItem.Icon>
+                                <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.images}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                             <MenuFlyoutSeparator />
                             <MenuFlyoutItem Text="Append PDF..." Tag="AppendPdf" Click="DocCommand_Click">
-                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/merge.svg" /></MenuFlyoutItem.Icon>
+                                <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.merge}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                             <MenuFlyoutItem Text="Append images..." Tag="AppendImages" Click="DocCommand_Click">
-                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/append-images.svg" /></MenuFlyoutItem.Icon>
+                                <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.append-images}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                         </MenuFlyoutSubItem>
-                        <MenuFlyoutItem x:Name="RemovePasswordItem" Text="Save a copy without password..." Tag="RemovePassword" Click="DocCommand_Click">
+                        <MenuFlyoutItem x:Name="RemovePasswordItem" Text="Save a copy without password..." AccessKey="W" Tag="RemovePassword" Click="DocCommand_Click">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE785;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutItem x:Name="PropertiesItem" Text="Properties" Tag="Properties" Click="DocCommand_Click" KeyboardAcceleratorTextOverride="Ctrl+D">
-                            <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/properties.svg" /></MenuFlyoutItem.Icon>
+                        <MenuFlyoutItem x:Name="PropertiesItem" Text="Properties" Tag="Properties" AccessKey="I" Click="DocCommand_Click" KeyboardAcceleratorTextOverride="Ctrl+D">
+                            <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.properties}" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem Text="Full screen" Click="FullScreen_Click" KeyboardAcceleratorTextOverride="F11">
-                            <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/fullscreen.svg" /></MenuFlyoutItem.Icon>
+                        <MenuFlyoutItem Text="Full screen" Click="FullScreen_Click" AccessKey="F" KeyboardAcceleratorTextOverride="F11">
+                            <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.fullscreen}" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutItem Text="Keyboard shortcuts" Click="Shortcuts_Click" KeyboardAcceleratorTextOverride="F1">
+                        <MenuFlyoutItem Text="Keyboard shortcuts" Click="Shortcuts_Click" AccessKey="K" KeyboardAcceleratorTextOverride="F1">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE765;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutItem Text="Settings" Click="Settings_Click">
-                            <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/settings.svg" /></MenuFlyoutItem.Icon>
+                        <MenuFlyoutItem Text="Settings" Click="Settings_Click" AccessKey="G">
+                            <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.settings}" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                     </MenuFlyout>
                 </Button.Flyout>

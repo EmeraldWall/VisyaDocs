@@ -3,6 +3,7 @@ using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
 using VisyaDocs.Core;
 using Windows.Foundation;
@@ -62,11 +63,22 @@ public sealed partial class PageView : Grid
         foreach (var (element, rect, _) in _hotspots) Place(element, rect);
     }
 
-    public void SetBitmap(ImageSource? source, double stamp)
+    /// <summary>Shows a rendered bitmap; the previous one goes back to the pool for reuse.</summary>
+    public void SetBitmap(WriteableBitmap? bitmap, double stamp)
     {
-        _image.Source = source;
-        RenderedStamp = source is null ? 0 : stamp;
+        var previous = _bitmap;
+        _bitmap = bitmap;
+        _image.Source = bitmap;
+        RenderedStamp = bitmap is null ? 0 : stamp;
+        // A page that was blank fades in; a sharper re-render (after zooming) just replaces it.
+        if (previous is null && bitmap is not null) Services.Motion.FadeIn(_image);
+        if (previous is not null && previous != bitmap) BitmapPool.Return(previous);
     }
+
+    private WriteableBitmap? _bitmap;
+
+    /// <summary>The bitmap currently shown, if any.</summary>
+    public WriteableBitmap? Bitmap => _bitmap;
 
     public void ClearBitmap() => SetBitmap(null, 0);
 

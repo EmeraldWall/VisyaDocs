@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using VisyaDocs.App.Services;
@@ -16,6 +17,28 @@ public sealed partial class DocumentView
 
     /// <summary>Puts keyboard focus on the pages so PageDown, arrows and shortcuts work at once.</summary>
     public void FocusViewer() => Scroller.Focus(FocusState.Programmatic);
+
+    /// <summary>Areas F6 moves between, in order: tool bar, pages, thumbnails, side pane, search.</summary>
+    public IEnumerable<UIElement> FocusRegions()
+    {
+        yield return RailPanel;
+        yield return Scroller;
+        if (LeftPane.Visibility == Visibility.Visible) yield return LeftPane;
+        if (SidePane.Visibility == Visibility.Visible) yield return SidePane;
+        if (SearchPanel.Visibility == Visibility.Visible) yield return SearchPanel;
+    }
+
+    private bool IsFocusWithin(DependencyObject region) =>
+        XamlRoot is not null && FocusManager.GetFocusedElement(XamlRoot) is DependencyObject focused && IsDescendant(focused, region);
+
+    internal static bool IsDescendant(DependencyObject node, DependencyObject ancestor)
+    {
+        for (var n = node; n is not null; n = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(n))
+        {
+            if (n == ancestor) return true;
+        }
+        return false;
+    }
 
     /// <summary>True when the document can be saved as an unprotected copy (opened with its password, full rights).</summary>
     public bool CanRemovePassword => _doc.CanRemovePassword;

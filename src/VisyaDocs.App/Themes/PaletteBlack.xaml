@@ -47,6 +47,19 @@
             <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{StaticResource VisyaHoverColor}" />
             <SolidColorBrush x:Key="ToggleButtonBackground" Color="Transparent" />
             <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver" Color="{StaticResource VisyaHoverColor}" />
+            <!-- Checked tools: a soft tint instead of solid accent, so the colored icon stays readable. -->
+            <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="#18202C" />
+            <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="#1E2735" />
+            <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed" Color="#151C27" />
+            <SolidColorBrush x:Key="ToggleButtonForegroundChecked" Color="{StaticResource VisyaTextColor}" />
+            <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPointerOver" Color="{StaticResource VisyaTextColor}" />
+            <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPressed" Color="{StaticResource VisyaTextColor}" />
+            <StaticResource x:Key="ToggleButtonBorderBrushChecked" ResourceKey="VisyaAccentBrush" />
+            <StaticResource x:Key="ToggleButtonBorderBrushCheckedPointerOver" ResourceKey="VisyaAccentBrush" />
+            <StaticResource x:Key="ToggleButtonBorderBrushCheckedPressed" ResourceKey="VisyaAccentBrush" />
+            <SolidColorBrush x:Key="ToggleButtonBorderBrush" Color="Transparent" />
+            <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver" Color="Transparent" />
+            <SolidColorBrush x:Key="ToggleButtonBorderBrushPressed" Color="Transparent" />
             <SolidColorBrush x:Key="TextControlBackground" Color="{StaticResource VisyaControlColor}" />
             <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="{StaticResource VisyaHoverColor}" />
             <SolidColorBrush x:Key="ComboBoxBackground" Color="{StaticResource VisyaControlColor}" />

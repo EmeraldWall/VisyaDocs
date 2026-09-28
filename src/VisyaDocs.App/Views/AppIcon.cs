@@ -5,54 +5,58 @@ using Microsoft.UI.Xaml.Media.Imaging;
 namespace VisyaDocs.App.Views;
 
 /// <summary>
-/// A toolbar icon drawn from its SVG (Assets/Icons/&lt;name&gt;.svg), rasterized by Direct2D at the exact
-/// device resolution so it stays sharp at any display scale. Falls back to the 4x PNG if the SVG
-/// cannot be opened.
+/// A toolbar icon drawn from its SVG, rasterized by Direct2D at the exact device resolution so it
+/// stays sharp at any display scale. The light theme uses the darker set in Assets/Icons/Light,
+/// dark and black themes use Assets/Icons, so the icon keeps its contrast against the background.
 /// </summary>
 public sealed partial class AppIcon : Grid
 {
+    public static readonly DependencyProperty IconProperty = DependencyProperty.Register(
+        nameof(Icon), typeof(string), typeof(AppIcon), new PropertyMetadata(string.Empty, (d, _) => ((AppIcon)d).Load()));
+
+    public static readonly DependencyProperty SizeProperty = DependencyProperty.Register(
+        nameof(Size), typeof(double), typeof(AppIcon), new PropertyMetadata(20.0, (d, _) => ((AppIcon)d).Resize()));
+
     private readonly Image _image = new() { Stretch = Microsoft.UI.Xaml.Media.Stretch.Uniform };
-    private string _icon = string.Empty;
-    private double _size = 20;
+    private string _loaded = string.Empty;
 
     public AppIcon()
     {
-        Width = Height = _size;
+        Width = Height = Size;
         Children.Add(_image);
-        Loaded += (_, _) => Rasterize();
+        Loaded += (_, _) => Load();
+        ActualThemeChanged += (_, _) => Load();
     }
 
     /// <summary>Icon name, for example "print".</summary>
     public string Icon
     {
-        get => _icon;
-        set
-        {
-            _icon = value;
-            Load();
-        }
+        get => (string)GetValue(IconProperty);
+        set => SetValue(IconProperty, value);
     }
 
     public double Size
     {
-        get => _size;
-        set
-        {
-            _size = value;
-            Width = Height = value;
-            Rasterize();
-        }
+        get => (double)GetValue(SizeProperty);
+        set => SetValue(SizeProperty, value);
+    }
+
+    private void Resize()
+    {
+        Width = Height = Size;
+        Rasterize();
     }
 
     private void Load()
     {
-        if (_icon.Length == 0) return;
-        var svg = new SvgImageSource(new Uri($"ms-appx:///Assets/Icons/{_icon}.svg"));
-        svg.OpenFailed += (_, _) => _image.Source = new BitmapImage(new Uri($"ms-appx:///Assets/Icons/{_icon}.scale-400.png"))
+        if (string.IsNullOrEmpty(Icon)) return;
+        string folder = ActualTheme == ElementTheme.Light ? "Light/" : "";
+        string uri = $"ms-appx:///Assets/Icons/{folder}{Icon}.svg";
+        if (uri != _loaded)
         {
-            DecodePixelWidth = (int)Math.Ceiling(_size * (XamlRoot?.RasterizationScale ?? 2)),
-        };
-        _image.Source = svg;
+            _loaded = uri;
+            _image.Source = new SvgImageSource(new Uri(uri));
+        }
         Rasterize();
     }
 
@@ -60,7 +64,7 @@ public sealed partial class AppIcon : Grid
     {
         if (_image.Source is SvgImageSource svg && XamlRoot is not null)
         {
-            double pixels = Math.Ceiling(_size * XamlRoot.RasterizationScale);
+            double pixels = Math.Ceiling(Size * XamlRoot.RasterizationScale);
             svg.RasterizePixelWidth = pixels;
             svg.RasterizePixelHeight = pixels;
         }
