@@ -66,7 +66,7 @@
                               VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto"
                               ZoomMode="Enabled" MinZoomFactor="0.2" MaxZoomFactor="8" IsTabStop="True"
                               ViewChanged="Scroller_ViewChanged" SizeChanged="Scroller_SizeChanged">
-                    <Canvas x:Name="PagesCanvas" HorizontalAlignment="Center" />
+                    <Canvas x:Name="PagesCanvas" HorizontalAlignment="Center" Background="Transparent" />
                 </ScrollViewer>
 
             <!-- Floating tool rail: rounded, vertically centered on the left, collapsible to a handle. -->
@@ -76,8 +76,8 @@
                 <Border.Shadow>
                     <ThemeShadow />
                 </Border.Shadow>
-                <!-- When the window is short the tool bar scrolls; the thin scroll bar shows that more tools follow. -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto" HorizontalScrollMode="Disabled">
+                <!-- No scroll bar; when the window is short the tool bar still scrolls with the wheel or a swipe. -->
+                <ScrollViewer VerticalScrollBarVisibility="Hidden" VerticalScrollMode="Auto" HorizontalScrollMode="Disabled">
                     <!-- Keyboard: the tool bar is one Tab stop; Up and Down move between its buttons. -->
                     <StackPanel x:Name="RailPanel" Spacing="2" XYFocusKeyboardNavigation="Enabled" TabFocusNavigation="Once">
                         <!-- Grip: drag to move the tool bar to either side; the chevron folds it. -->

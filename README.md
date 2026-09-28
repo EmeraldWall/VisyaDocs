@@ -8,10 +8,10 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 
 **Reading first**
 - Thin title bar (the height of the window buttons) with a Menu button and compact document tabs that shrink and scroll instead of running under the window buttons. Drag it to move the window, double-click it to maximize or restore
-- Reading and editing tools live in a floating, rounded tool bar that folds away to a small handle and can be dragged to either side. Pages are laid out around it, so it never covers them or the side panes
+- Reading and editing tools live in a floating, rounded tool bar (open, at the top right by default) that folds away to a small handle and can be dragged to either side. Pages are laid out around it, so it never covers them or the side panes
 - Page and zoom indicator that fades out while you read
 - Layouts: continuous scroll, two pages side by side, two pages with the cover alone, single page (flip with PageUp/PageDown, arrow keys or the wheel)
-- Pinch to zoom on touchpads and touch screens, Ctrl + wheel, Ctrl+plus/minus, fit width, fit page
+- Pinch to zoom on touchpads and touch screens (the zoom follows the pinch, not a fixed step per touchpad event), Ctrl + wheel, Ctrl+plus/minus, fit width, fit page
 - Full screen (F11, Esc to leave)
 - Thumbnails that follow the page you are reading, and an Outline tab with the PDF's bookmarks (table of contents)
 - Links work: internal links jump to their page, web links ask before opening in your browser
