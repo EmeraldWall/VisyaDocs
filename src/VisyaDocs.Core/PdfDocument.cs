@@ -25,6 +25,7 @@ public sealed unsafe partial class PdfDocument : IDisposable
         _doc = doc;
         _buffer = buffer;
         _password = password;
+        InitFormsLocked();
     }
 
     /// <summary>Raised after any change to the document content (edit, undo, redo).</summary>
@@ -141,6 +142,9 @@ public sealed unsafe partial class PdfDocument : IDisposable
                     Pdfium.FPDFBitmap_FillRect(bitmap, 0, 0, width, height, new CULong(0xFFFFFFFF));
                     Pdfium.FPDF_RenderPageBitmap(bitmap, page, 0, 0, width, height, 0,
                         annotations ? Pdfium.FPDF_ANNOT : 0);
+                    // Interactive form fields draw their current values on top.
+                    if (annotations && _form != 0)
+                        Pdfium.FPDF_FFLDraw(_form, bitmap, page, 0, 0, width, height, 0, Pdfium.FPDF_ANNOT);
                 }
                 finally
                 {
@@ -173,6 +177,7 @@ public sealed unsafe partial class PdfDocument : IDisposable
 
     private byte[] SnapshotLocked()
     {
+        if (_form != 0) Pdfium.FORM_ForceToKillFocus(_form);
         using var stream = new MemoryStream();
         if (!Pdfium.SaveToStream(Handle, stream)) throw new PdfException("The PDF could not be saved.");
         return stream.ToArray();
@@ -200,6 +205,7 @@ public sealed unsafe partial class PdfDocument : IDisposable
         CloseLocked();
         _doc = doc;
         _buffer = (void*)buffer;
+        InitFormsLocked();
     }
 
     /// <summary>Runs an edit as one undoable step.</summary>
@@ -243,12 +249,14 @@ public sealed unsafe partial class PdfDocument : IDisposable
                 throw new ArgumentOutOfRangeException(nameof(pageIndex));
             nint page = Pdfium.FPDF_LoadPage(Handle, pageIndex);
             if (page == 0) throw new PdfException($"Page {pageIndex + 1} could not be loaded.");
+            if (_form != 0) Pdfium.FORM_OnAfterLoadPage(page, _form);
             try
             {
                 return action(page);
             }
             finally
             {
+                if (_form != 0) Pdfium.FORM_OnBeforeClosePage(page, _form);
                 Pdfium.FPDF_ClosePage(page);
             }
         }
@@ -270,6 +278,7 @@ public sealed unsafe partial class PdfDocument : IDisposable
 
     private void CloseLocked()
     {
+        ExitFormsLocked();
         foreach (nint font in _fonts.Values) Pdfium.FPDFFont_Close(font);
         _fonts.Clear();
         if (_doc != 0) Pdfium.FPDF_CloseDocument(_doc);

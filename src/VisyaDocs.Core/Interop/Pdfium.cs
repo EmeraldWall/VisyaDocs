@@ -162,6 +162,51 @@ internal static unsafe partial class Pdfium
     [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
     public static partial CULong FPDFAnnot_GetStringValue(nint annot, string key, char* buffer, CULong length);
 
+    // Document information
+    [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial CULong FPDF_GetMetaText(nint document, string tag, void* buffer, CULong length);
+    [LibraryImport(Lib)] public static partial int FPDF_GetFileVersion(nint document, int* version);
+    [LibraryImport(Lib)] public static partial CULong FPDF_GetDocPermissions(nint document);
+    [LibraryImport(Lib)] public static partial int FPDF_GetSecurityHandlerRevision(nint document);
+    [LibraryImport(Lib)] public static partial int FPDF_GetFormType(nint document);
+
+    // Interactive forms
+    public const int FORMTYPE_ACRO_FORM = 1;
+    public const int FPDF_ANNOT_WIDGET = 20;
+    public const int FPDF_FORMFLAG_READONLY = 1 << 0, FPDF_FORMFLAG_REQUIRED = 1 << 1, FPDF_FORMFLAG_TEXT_MULTILINE = 1 << 12;
+    [LibraryImport(Lib)] public static partial nint FPDFDOC_InitFormFillEnvironment(nint document, void* formInfo);
+    [LibraryImport(Lib)] public static partial void FPDFDOC_ExitFormFillEnvironment(nint form);
+    [LibraryImport(Lib)] public static partial void FORM_OnAfterLoadPage(nint page, nint form);
+    [LibraryImport(Lib)] public static partial void FORM_OnBeforeClosePage(nint page, nint form);
+    [LibraryImport(Lib)]
+    public static partial void FPDF_FFLDraw(nint form, nint bitmap, nint page, int startX, int startY, int sizeX, int sizeY, int rotate, int flags);
+    [LibraryImport(Lib)] public static partial int FORM_SetFocusedAnnot(nint form, nint annot);
+    [LibraryImport(Lib)] public static partial int FORM_SelectAllText(nint form, nint page);
+    [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial void FORM_ReplaceSelection(nint form, nint page, string text);
+    [LibraryImport(Lib)] public static partial int FORM_ForceToKillFocus(nint form);
+    [LibraryImport(Lib)] public static partial int FORM_OnLButtonDown(nint form, nint page, int modifier, double x, double y);
+    [LibraryImport(Lib)] public static partial int FORM_OnLButtonUp(nint form, nint page, int modifier, double x, double y);
+    [LibraryImport(Lib)] public static partial int FORM_SetIndexSelected(nint form, nint page, int index, int selected);
+    [LibraryImport(Lib)] public static partial int FPDFAnnot_GetFormFieldType(nint form, nint annot);
+    [LibraryImport(Lib)] public static partial int FPDFAnnot_GetFormFieldFlags(nint form, nint annot);
+    [LibraryImport(Lib)] public static partial CULong FPDFAnnot_GetFormFieldName(nint form, nint annot, char* buffer, CULong length);
+    [LibraryImport(Lib)] public static partial CULong FPDFAnnot_GetFormFieldValue(nint form, nint annot, char* buffer, CULong length);
+    [LibraryImport(Lib)] public static partial int FPDFAnnot_GetOptionCount(nint form, nint annot);
+    [LibraryImport(Lib)] public static partial CULong FPDFAnnot_GetOptionLabel(nint form, nint annot, int index, char* buffer, CULong length);
+    [LibraryImport(Lib)] public static partial int FPDFAnnot_IsOptionSelected(nint form, nint annot, int index);
+    [LibraryImport(Lib)] public static partial int FPDFAnnot_IsChecked(nint form, nint annot);
+
+    /// <summary>Reads a UTF-16 string from a PDFium "measure, then fill" style API returning byte counts.</summary>
+    public static string ReadUtf16(Func<nint, ulong, ulong> call)
+    {
+        ulong bytes = call(0, 0);
+        if (bytes <= 2) return string.Empty;
+        var buffer = new char[bytes / 2];
+        fixed (char* p = buffer) call((nint)p, bytes);
+        return new string(buffer, 0, buffer.Length - 1);
+    }
+
     /// <summary>Sets a UTF-16 string value on an annotation dictionary key.</summary>
     public static bool AnnotSetString(nint annot, string key, string value)
     {
