@@ -40,12 +40,35 @@ internal static class BitmapPool
         while (s_pooledBytes > MaxPooledBytes && s_free.Count > 0) Discard(0);
     }
 
-    /// <summary>Frees every pooled bitmap (after a zoom change, or when the window is hidden).</summary>
+    /// <summary>Frees every pooled bitmap and the render buffer (reading paused, or the window is hidden).</summary>
     public static void Trim()
     {
+        s_trimTimer?.Stop();
+        if (s_free.Count == 0 && s_buffer is null) return;
         while (s_free.Count > 0) Discard(0);
         s_buffer = null;
         Collect();
+    }
+
+    private static Microsoft.UI.Dispatching.DispatcherQueueTimer? s_trimTimer;
+
+    /// <summary>
+    /// Spare bitmaps only help while scrolling; once the view has been still for a moment they are
+    /// freed, so an idle reader holds just the pages on screen.
+    /// </summary>
+    public static void TrimWhenIdle()
+    {
+        if (s_trimTimer is null)
+        {
+            var queue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            if (queue is null) return;
+            s_trimTimer = queue.CreateTimer();
+            s_trimTimer.Interval = TimeSpan.FromSeconds(2);
+            s_trimTimer.IsRepeating = false;
+            s_trimTimer.Tick += (_, _) => Trim();
+        }
+        s_trimTimer.Stop();
+        s_trimTimer.Start();
     }
 
     private static void Discard(int index)

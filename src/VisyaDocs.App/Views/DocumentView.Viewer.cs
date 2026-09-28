@@ -380,7 +380,11 @@ public sealed partial class DocumentView
             return;
         }
         UpdateVisiblePages();
-        if (!e.IsIntermediate) ShowStatusPill();
+        if (!e.IsIntermediate)
+        {
+            ShowStatusPill();
+            BitmapPool.TrimWhenIdle();
+        }
     }
 
     private void Scroller_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
@@ -600,6 +604,7 @@ public sealed partial class DocumentView
             ShowStatusPill();
             // Flipping slides the new page in from the side it comes from.
             if (direction != 0) Motion.SlideIn(_pages[index], direction * 36);
+            BitmapPool.TrimWhenIdle();
             return;
         }
         double y = _tops[index] - 8;
