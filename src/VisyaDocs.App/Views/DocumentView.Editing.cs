@@ -83,6 +83,9 @@ public sealed partial class DocumentView
             case EditTool.Comment:
                 BeginComment(page, point.Position, pagePoint);
                 break;
+            case EditTool.PlaceSignature:
+                BeginSignaturePlacement(page, point.Position);
+                break;
         }
         e.Handled = true;
     }
@@ -347,7 +350,7 @@ public sealed partial class DocumentView
             item.Click += (_, _) =>
             {
                 _textColor = color;
-                ColorIcon.Foreground = new SolidColorBrush(ColorHelper.FromArgb(255, color.R, color.G, color.B));
+                ColorSwatch.Fill = new SolidColorBrush(ColorHelper.FromArgb(255, color.R, color.G, color.B));
             };
             ColorMenu.Items.Add(item);
         }

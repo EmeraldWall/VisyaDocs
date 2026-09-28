@@ -6,32 +6,41 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 
 ## Features
 
-**Read**
-- Tabs for several documents, drag and drop, recent files, "Open with" from Explorer
-- Smooth scrolling with lazy page rendering (memory stays flat on long documents)
-- Zoom: fit width, fit page, presets, Ctrl + mouse wheel, Ctrl + plus/minus
-- Page thumbnails, go to page, search with highlighted matches (Enter / Shift+Enter)
-- Select text (drag, double click for a word, Ctrl+A for the page) and copy
-- Print (Ctrl+P) with the standard Windows print dialog: printer, page range, current page, copies. Pages print as sharp vector output, landscape pages turn to fill the sheet, and comments and highlights are included
+**Reading first**
+- Thin title bar (the height of the window buttons) with compact document tabs and one menu
+- All tools live in a floating, rounded tool rail on the left that folds away to a small handle
+- Page and zoom indicator that fades out while you read
+- Layouts: continuous scroll, two pages side by side, two pages with the cover alone, single page (flip with PageUp/PageDown, arrow keys or the wheel)
+- Pinch to zoom on touchpads and touch screens, Ctrl + wheel, Ctrl+plus/minus, fit width, fit page
+- Full screen (F11, Esc to leave)
+- Thumbnails, search (Ctrl+F) with highlighted matches, text selection and copy
+- Document properties (Ctrl+D): title, author, dates, PDF version, page size, security and permissions
+
+**Fill and sign**
+- **Fill PDF forms**: text fields, check boxes, radio buttons and drop-downs are filled in place and saved into the PDF
+- **E-sign**: draw a signature (mouse, pen or finger), type it in a handwriting font, or use an image. Move and resize it on the page, optionally add the date. Up to three signatures are remembered. Signature fields in forms offer "Sign here"
+- (This is a visual signature, like "Fill & Sign". Certificate based digital signatures are not included.)
 
 **Edit**
 - **Edit text**: click existing text and change it in place. The original embedded font is kept when it can show the new text, otherwise the run is rebuilt with a matching standard font at the same position, size and color
 - **Add text**: click anywhere, type (multi line), choose size and color
-- **Comments**: sticky note comments with author and date, editable and deletable, plus highlights (with optional comment) on selected text
-- Comments pane listing every comment in the document
+- **Comments** (sticky notes) and **highlights**, with a comments pane
 - Undo / redo for every edit, safe save (writes a temporary file first)
 
+**Print**
+- Standard Windows print dialog (printer, page range, current page, copies). Pages print as sharp vector output, landscape pages turn to fill the sheet, comments, highlights and form values are included
+
 **Convert**
-- **OCR**: "Make searchable" adds an invisible text layer to scanned pages, so they can be searched, selected and copied. "Extract text" shows all text, using OCR for scanned pages
+- **OCR**: "Make searchable" adds an invisible text layer to scanned pages. "Extract text" shows all text, using OCR for scanned pages
 - Export to Word (.docx), plain text (.txt), PNG or JPEG images (with page ranges and DPI). Scanned pages are recognized automatically during export
 - Images to PDF (JPG, PNG, TIFF, HEIC, ...). JPEGs are embedded without re-encoding
 - Merge PDFs, append pages or images to an open document
 
 **Look and feel**
-- Theme: System, Light or Dark (title bar icon or Settings)
+- Theme: System, Light or Dark
   - Light is a soft grey instead of stark white, to reduce eye strain
   - Dark uses pure black with dark grey panes, and optionally dims pages for night reading
-- Fluent icons for every command (the Windows system icon font, so no extra size)
+- Color icons in Microsoft's Fluent style (see Third party notices)
 - Custom app icon and .pdf file icon (sources in `assets/icon`)
 
 ## Why it is light
@@ -75,6 +84,10 @@ The core library (`VisyaDocs.Core`) has no Windows dependencies, so its tests al
 
 ### Regenerating icons
 
+Toolbar icons: `python build/export_ui_icons.py` (needs `pip install cairosvg`).
+
+App icon:
+
 Edit the SVGs in `assets/icon`, then:
 
 ```bash
@@ -97,6 +110,10 @@ build/                  PDFium download targets, icon export script
 - Text editing works on text runs as the PDF stores them. Some PDFs store one word or even one character per run, so an edit may cover a smaller piece than a whole line.
 - When the embedded font cannot show the new characters, the replacement uses Helvetica (or Arial for non Latin text), so the look can differ slightly from the original.
 - Text written into CJK scripts needs a font that covers them; Arial is used as the fallback.
+
+## Third party notices
+
+Toolbar icons are built from Microsoft's [Fluent UI System Icons](https://github.com/microsoft/fluentui-system-icons) (MIT license, see `assets/ui-icons/fluent/LICENSE`). Official color icons are used as they are; icons without a color variant are recolored with the same gradient ramps by `build/export_ui_icons.py`.
 
 ## License of dependencies
 

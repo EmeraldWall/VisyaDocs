@@ -9,105 +9,114 @@
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Modifiers="Control" Key="O" Invoked="OpenAccelerator_Invoked" />
             <KeyboardAccelerator Modifiers="Control" Key="W" Invoked="CloseTabAccelerator_Invoked" />
+            <KeyboardAccelerator Modifiers="Control" Key="Tab" Invoked="NextTabAccelerator_Invoked" />
+            <KeyboardAccelerator Key="F11" Invoked="FullScreenAccelerator_Invoked" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition x:Name="TitleRow" Height="32" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Title bar: the left part is the drag region, the buttons on the right stay clickable. -->
-        <Grid Height="44">
+        <!--
+          Title bar: exactly the height of the caption buttons. The whole row is the drag area;
+          tabs and the menu button are carved out as clickable (pass-through) regions in code.
+        -->
+        <Grid x:Name="AppTitleBar" Background="Transparent">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" MinWidth="48" />
                 <ColumnDefinition x:Name="CaptionInset" Width="138" />
             </Grid.ColumnDefinitions>
-            <Grid x:Name="AppTitleBar" Background="Transparent">
-                <StackPanel Orientation="Horizontal" Spacing="10" Margin="14,0,0,0" VerticalAlignment="Center">
-                    <Image Source="ms-appx:///Assets/AppLogo.png" Width="20" Height="20" />
-                    <TextBlock Text="VisyaDocs" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <TextBlock x:Name="TitleDocument" Foreground="{ThemeResource VisyaSubtleTextBrush}"
-                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-            </Grid>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Open a PDF (Ctrl+O)" Click="Open_Click">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="{StaticResource IconOpen}" FontSize="16" />
-                        <TextBlock Text="Open" />
-                    </StackPanel>
-                </Button>
-                <DropDownButton ToolTipService.ToolTip="Create a PDF" Background="Transparent" BorderThickness="0" Height="34">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="{StaticResource IconImagesToPdf}" FontSize="16" />
-                        <TextBlock Text="Create" />
-                    </StackPanel>
-                    <DropDownButton.Flyout>
-                        <MenuFlyout Placement="BottomEdgeAlignedRight">
-                            <MenuFlyoutItem Text="Images to PDF" Click="ImagesToPdf_Click">
-                                <MenuFlyoutItem.Icon><FontIcon Glyph="{StaticResource IconImagesToPdf}" /></MenuFlyoutItem.Icon>
-                            </MenuFlyoutItem>
-                            <MenuFlyoutItem Text="Merge PDFs" Click="MergePdfs_Click">
-                                <MenuFlyoutItem.Icon><FontIcon Glyph="{StaticResource IconMerge}" /></MenuFlyoutItem.Icon>
-                            </MenuFlyoutItem>
-                        </MenuFlyout>
-                    </DropDownButton.Flyout>
-                </DropDownButton>
-                <Button x:Name="ThemeButton" Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Theme">
-                    <FontIcon Glyph="{StaticResource IconTheme}" FontSize="16" />
+            <Image Source="ms-appx:///Assets/AppLogo.png" Width="16" Height="16" Margin="12,0,8,0" VerticalAlignment="Center" />
+
+            <StackPanel x:Name="TitleInteractive" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Stretch">
+                <Button x:Name="MenuButton" Style="{StaticResource TitleBarButtonStyle}" ToolTipService.ToolTip="Menu">
+                    <FontIcon Glyph="&#xE712;" FontSize="14" />
                     <Button.Flyout>
-                        <MenuFlyout Placement="BottomEdgeAlignedRight">
-                            <RadioMenuFlyoutItem x:Name="ThemeSystemItem" Text="System" GroupName="Theme" Click="ThemeItem_Click" Tag="System" />
-                            <RadioMenuFlyoutItem x:Name="ThemeLightItem" Text="Light (soft grey)" GroupName="Theme" Click="ThemeItem_Click" Tag="Light" />
-                            <RadioMenuFlyoutItem x:Name="ThemeDarkItem" Text="Dark (black and grey)" GroupName="Theme" Click="ThemeItem_Click" Tag="Dark" />
+                        <MenuFlyout x:Name="AppMenu" Placement="BottomEdgeAlignedLeft">
+                            <MenuFlyoutItem Text="Open PDF..." Click="Open_Click" KeyboardAcceleratorTextOverride="Ctrl+O">
+                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/open.png" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSubItem x:Name="RecentMenu" Text="Recent">
+                                <MenuFlyoutSubItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/recent.png" /></MenuFlyoutSubItem.Icon>
+                            </MenuFlyoutSubItem>
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="Images to PDF..." Click="ImagesToPdf_Click">
+                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/create.png" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Text="Merge PDFs..." Click="MergePdfs_Click">
+                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/merge.png" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutSubItem Text="Theme">
+                                <MenuFlyoutSubItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/theme.png" /></MenuFlyoutSubItem.Icon>
+                                <RadioMenuFlyoutItem x:Name="ThemeSystemItem" Text="System" GroupName="Theme" Click="ThemeItem_Click" Tag="System" />
+                                <RadioMenuFlyoutItem x:Name="ThemeLightItem" Text="Light (soft grey)" GroupName="Theme" Click="ThemeItem_Click" Tag="Light" />
+                                <RadioMenuFlyoutItem x:Name="ThemeDarkItem" Text="Dark (black and grey)" GroupName="Theme" Click="ThemeItem_Click" Tag="Dark" />
+                            </MenuFlyoutSubItem>
+                            <MenuFlyoutItem Text="Full screen" Click="FullScreen_Click" KeyboardAcceleratorTextOverride="F11">
+                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/fullscreen.png" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Text="Settings" Click="Settings_Click">
+                                <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/settings.png" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
-                <Button Style="{StaticResource ToolButtonStyle}" ToolTipService.ToolTip="Settings" Click="Settings_Click">
-                    <FontIcon Glyph="{StaticResource IconSettings}" FontSize="16" />
+
+                <!-- Compact document tabs (built in code). -->
+                <ScrollViewer x:Name="TabScroller" HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="TabStrip" Orientation="Horizontal" Spacing="2" Margin="4,0,0,0" />
+                </ScrollViewer>
+                <Button x:Name="NewTabButton" Style="{StaticResource TitleBarButtonStyle}" ToolTipService.ToolTip="Open a PDF (Ctrl+O)" Click="Open_Click">
+                    <FontIcon Glyph="&#xE710;" FontSize="12" />
                 </Button>
             </StackPanel>
+
+            <TextBlock x:Name="TitleDocument" Grid.Column="2" VerticalAlignment="Center" Margin="12,0" FontSize="12"
+                       Opacity="0.6" TextTrimming="CharacterEllipsis" IsHitTestVisible="False" />
         </Grid>
 
-        <TabView x:Name="Tabs" Grid.Row="1" Visibility="Collapsed" IsAddTabButtonVisible="True"
-                 AddTabButtonClick="Tabs_AddTabButtonClick" TabCloseRequested="Tabs_TabCloseRequested"
-                 SelectionChanged="Tabs_SelectionChanged" TabWidthMode="SizeToContent" />
+        <!-- Open documents; only the active one is visible. -->
+        <Grid x:Name="DocumentHost" Grid.Row="1" />
 
         <!-- Home: shown when no document is open. -->
         <ScrollViewer x:Name="HomePanel" Grid.Row="1">
-            <StackPanel MaxWidth="700" Margin="32,48,32,32" Spacing="24" HorizontalAlignment="Center">
-                <StackPanel Spacing="4">
-                    <Image Source="ms-appx:///Assets/AppLogo.png" Width="72" Height="72" HorizontalAlignment="Left" />
+            <StackPanel MaxWidth="720" Margin="32,56,32,32" Spacing="28" HorizontalAlignment="Center">
+                <StackPanel Spacing="6">
+                    <Image Source="ms-appx:///Assets/AppLogo.png" Width="64" Height="64" HorizontalAlignment="Left" />
                     <TextBlock Text="VisyaDocs" Style="{StaticResource TitleTextBlockStyle}" />
-                    <TextBlock Text="Read, edit, comment and convert PDFs. Scanned pages become searchable text with the OCR built into Windows."
-                               Foreground="{ThemeResource VisyaSubtleTextBrush}" TextWrapping="Wrap" />
+                    <TextBlock Text="Read, fill, sign, comment and convert PDFs. Scanned pages become searchable with the OCR built into Windows."
+                               Opacity="0.7" TextWrapping="Wrap" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <Button Style="{StaticResource HomeCardButtonStyle}" Click="Open_Click">
-                        <StackPanel Spacing="8">
-                            <FontIcon Glyph="{StaticResource IconOpen}" FontSize="24" HorizontalAlignment="Left" Foreground="{ThemeResource VisyaAccentBrush}" />
+                        <StackPanel Spacing="10">
+                            <Image Source="ms-appx:///Assets/Icons/open.png" Width="32" Height="32" HorizontalAlignment="Left" />
                             <TextBlock Text="Open PDF" FontWeight="SemiBold" />
-                            <TextBlock Text="Or drop files here" Foreground="{ThemeResource VisyaSubtleTextBrush}" FontSize="12" />
+                            <TextBlock Text="Or drop files here" Opacity="0.65" FontSize="12" />
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource HomeCardButtonStyle}" Click="ImagesToPdf_Click">
-                        <StackPanel Spacing="8">
-                            <FontIcon Glyph="{StaticResource IconImagesToPdf}" FontSize="24" HorizontalAlignment="Left" Foreground="{ThemeResource VisyaAccentBrush}" />
+                        <StackPanel Spacing="10">
+                            <Image Source="ms-appx:///Assets/Icons/create.png" Width="32" Height="32" HorizontalAlignment="Left" />
                             <TextBlock Text="Images to PDF" FontWeight="SemiBold" />
-                            <TextBlock Text="JPG, PNG, TIFF, HEIC" Foreground="{ThemeResource VisyaSubtleTextBrush}" FontSize="12" />
+                            <TextBlock Text="JPG, PNG, TIFF, HEIC" Opacity="0.65" FontSize="12" />
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource HomeCardButtonStyle}" Click="MergePdfs_Click">
-                        <StackPanel Spacing="8">
-                            <FontIcon Glyph="{StaticResource IconMerge}" FontSize="24" HorizontalAlignment="Left" Foreground="{ThemeResource VisyaAccentBrush}" />
+                        <StackPanel Spacing="10">
+                            <Image Source="ms-appx:///Assets/Icons/merge.png" Width="32" Height="32" HorizontalAlignment="Left" />
                             <TextBlock Text="Merge PDFs" FontWeight="SemiBold" />
-                            <TextBlock Text="Combine files into one" Foreground="{ThemeResource VisyaSubtleTextBrush}" FontSize="12" />
+                            <TextBlock Text="Combine files into one" Opacity="0.65" FontSize="12" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
                 <StackPanel x:Name="RecentSection" Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="{StaticResource IconRecent}" FontSize="14" />
+                        <Image Source="ms-appx:///Assets/Icons/recent.png" Width="16" Height="16" />
                         <TextBlock Text="Recent" FontWeight="SemiBold" />
                     </StackPanel>
                     <StackPanel x:Name="RecentList" Spacing="2" />

@@ -17,12 +17,14 @@ public enum EditTool
     AddText,
     Comment,
     Highlight,
+    FillForm,
+    PlaceSignature,
 }
 
 /// <summary>
-/// One open document: toolbar, page viewer, thumbnails and side pane. The partial files split
-/// it into viewing (DocumentView.Viewer), editing (DocumentView.Editing) and conversion
-/// (DocumentView.Convert).
+/// One open document: page viewer with a floating tool rail, thumbnails and side pane. The
+/// partial files split it into viewing (Viewer), editing (Editing), forms (Forms), signing (Sign),
+/// printing (Print) and conversion (Convert).
 /// </summary>
 public sealed partial class DocumentView : UserControl, IDisposable
 {
@@ -31,7 +33,6 @@ public sealed partial class DocumentView : UserControl, IDisposable
     private string _name;
     private bool _disposed;
     private EditTool _tool = EditTool.Select;
-    private EditTool _lastEditTool = EditTool.EditText;
     private CancellationTokenSource? _operation;
     private int _messageVersion;
 
@@ -47,9 +48,12 @@ public sealed partial class DocumentView : UserControl, IDisposable
         ThumbList.ItemsSource = _thumbs;
         CommentsList.ItemsSource = _comments;
         Scroller.AddHandler(PointerWheelChangedEvent, new PointerEventHandler(Scroller_PointerWheelChanged), true);
+        Scroller.AddHandler(KeyDownEvent, new KeyEventHandler(Scroller_KeyDown), true);
         AddMainKeyboardZoomAccelerators();
         BuildColorMenu();
         UpdateUndoRedo();
+        UpdateLayoutMenu();
+        SetRailCollapsed(AppSettings.Current.RailCollapsed);
     }
 
     public event EventHandler? TitleChanged;
@@ -89,6 +93,15 @@ public sealed partial class DocumentView : UserControl, IDisposable
         foreach (var page in _pages) ApplyAppearance(page);
     }
 
+    /// <summary>Full screen hides the title bar; the rail folds to its handle to keep the page clear.</summary>
+    public void OnFullScreenChanged(bool fullScreen)
+    {
+        _fullScreen = fullScreen;
+        FullScreenIcon.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(
+            new Uri(fullScreen ? "ms-appx:///Assets/Icons/fullscreen-exit.png" : "ms-appx:///Assets/Icons/fullscreen.png"));
+        SetRailCollapsed(fullScreen || AppSettings.Current.RailCollapsed);
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
@@ -102,7 +115,14 @@ public sealed partial class DocumentView : UserControl, IDisposable
     {
         Loaded -= DocumentView_Loaded;
         await BuildPagesAsync();
-        SetZoom(Math.Min(FitWidthZoom(), 1.5), ZoomKind.FitWidth);
+        if (_layout == ViewLayout.SinglePage) SetZoom(FitPageZoom(), ZoomKind.FitPage);
+        else SetZoom(Math.Min(FitWidthZoom(), 1.5), ZoomKind.FitWidth);
+        if (_doc.HasForm)
+        {
+            FormTool.Visibility = Visibility.Visible;
+            FormBar.IsOpen = true;
+            SetTool(EditTool.FillForm);
+        }
         await CheckScannedAsync();
     }
 
@@ -139,40 +159,120 @@ public sealed partial class DocumentView : UserControl, IDisposable
 
     // Modes and tools -------------------------------------------------------------------------
 
-    private void ModeBar_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
-    {
-        var item = sender.SelectedItem;
-        EditTools.Visibility = item == EditModeItem ? Visibility.Visible : Visibility.Collapsed;
-        ConvertTools.Visibility = item == ConvertModeItem ? Visibility.Visible : Visibility.Collapsed;
-        SetTool(item == EditModeItem ? _lastEditTool : EditTool.Select);
-    }
-
     private void Tool_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: string tag } && Enum.TryParse<EditTool>(tag, out var tool))
-        {
-            _lastEditTool = tool;
-            SetTool(tool);
-        }
+            SetTool(tool == _tool && tool != EditTool.Select ? EditTool.Select : tool);
     }
 
     private void SetTool(EditTool tool)
     {
         CommitEditor();
+        if (_tool == EditTool.PlaceSignature && tool != EditTool.PlaceSignature) CancelSignaturePlacement();
+        bool formChanged = (_tool == EditTool.FillForm) != (tool == EditTool.FillForm);
         _tool = tool;
         SelectTool.IsChecked = tool == EditTool.Select;
         EditTextTool.IsChecked = tool == EditTool.EditText;
         AddTextTool.IsChecked = tool == EditTool.AddText;
         CommentTool.IsChecked = tool == EditTool.Comment;
         HighlightTool.IsChecked = tool == EditTool.Highlight;
+        FormTool.IsChecked = tool == EditTool.FillForm;
+        SignTool.IsChecked = tool == EditTool.PlaceSignature;
+        TextOptions.Visibility = tool == EditTool.AddText ? Visibility.Visible : Visibility.Collapsed;
         var cursor = tool switch
         {
-            EditTool.AddText or EditTool.Comment => InputSystemCursorShape.Cross,
+            EditTool.AddText or EditTool.Comment or EditTool.PlaceSignature => InputSystemCursorShape.Cross,
             EditTool.EditText => InputSystemCursorShape.Hand,
+            EditTool.FillForm => InputSystemCursorShape.Arrow,
             _ => InputSystemCursorShape.IBeam,
         };
         foreach (var page in _pages) page.SetCursor(cursor);
         if (tool != EditTool.Select && tool != EditTool.Highlight) ClearSelection();
+        if (formChanged) RefreshFormOverlays();
+    }
+
+    // Rail, full screen and status pill -------------------------------------------------------
+
+    private bool _fullScreen;
+    private int _pillVersion;
+
+    private void RailCollapse_Click(object sender, RoutedEventArgs e)
+    {
+        bool collapse = RailItems.Visibility == Visibility.Visible;
+        SetRailCollapsed(collapse);
+        if (!_fullScreen)
+        {
+            AppSettings.Current.RailCollapsed = collapse;
+            AppSettings.Current.Save();
+        }
+    }
+
+    private void SetRailCollapsed(bool collapsed)
+    {
+        RailItems.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
+        RailCollapseGlyph.Glyph = collapsed ? "\uE76C" : "\uE76B";
+        ToolTipService.SetToolTip(RailCollapseButton, collapsed ? "Show tools" : "Hide tools");
+    }
+
+    private void FullScreen_Click(object sender, RoutedEventArgs e) => App.MainWindow.ToggleFullScreen();
+
+    /// <summary>Shows the page/zoom pill, then fades it out after a moment so the page stays clear.</summary>
+    private void ShowStatusPill()
+    {
+        StatusPill.Opacity = 1;
+        int version = ++_pillVersion;
+        _ = Task.Delay(2500).ContinueWith(_ => _dispatcher.TryEnqueue(() =>
+        {
+            if (version == _pillVersion && PageBox.FocusState == FocusState.Unfocused) StatusPill.Opacity = 0.0;
+        }));
+    }
+
+    private void StatusPill_PointerEntered(object sender, PointerRoutedEventArgs e) => ShowStatusPill();
+
+    private void Root_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        // Bring the pill back when the pointer nears the bottom edge.
+        if (e.GetCurrentPoint(Root).Position.Y > Root.ActualHeight - 90 && StatusPill.Opacity < 1) ShowStatusPill();
+    }
+
+    private async void Properties_Click(object sender, RoutedEventArgs e) => await ShowPropertiesAsync();
+
+    private async void PropertiesAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        await ShowPropertiesAsync();
+    }
+
+    private async Task ShowPropertiesAsync()
+    {
+        try
+        {
+            var properties = await Task.Run(_doc.GetProperties);
+            await PropertiesDialog.ShowAsync(XamlRoot, properties);
+        }
+        catch (PdfException ex)
+        {
+            ShowMessage("Could not read the properties", ex.Message, InfoBarSeverity.Error);
+        }
+    }
+
+    private void SearchButton_Click(object sender, RoutedEventArgs e) => OpenSearch();
+
+    private void OpenSearch()
+    {
+        SearchPanel.Visibility = Visibility.Visible;
+        SearchBox.Focus(FocusState.Keyboard);
+        SearchBox.SelectAll();
+    }
+
+    private void SearchClose_Click(object sender, RoutedEventArgs e) => CloseSearch();
+
+    private void CloseSearch()
+    {
+        SearchPanel.Visibility = Visibility.Collapsed;
+        SearchBox.Text = string.Empty;
+        ClearSearchMarks();
+        Scroller.Focus(FocusState.Programmatic);
     }
 
     // Messages and long operations ------------------------------------------------------------
@@ -294,8 +394,7 @@ public sealed partial class DocumentView : UserControl, IDisposable
     private void FindAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         args.Handled = true;
-        SearchBox.Focus(FocusState.Keyboard);
-        SearchBox.SelectAll();
+        OpenSearch();
     }
 
     private async void UndoAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
@@ -345,16 +444,13 @@ public sealed partial class DocumentView : UserControl, IDisposable
 
     private void EscapeAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
-        if (_editor is not null)
-        {
-            CancelEditor();
-            args.Handled = true;
-        }
-        else if (_selection is not null)
-        {
-            ClearSelection();
-            args.Handled = true;
-        }
+        args.Handled = true;
+        if (_editor is not null) CancelEditor();
+        else if (_tool == EditTool.PlaceSignature) SetTool(EditTool.Select);
+        else if (_selection is not null) ClearSelection();
+        else if (SearchPanel.Visibility == Visibility.Visible) CloseSearch();
+        else if (_fullScreen) App.MainWindow.SetFullScreen(false);
+        else args.Handled = false;
     }
 
     // Ctrl with the main keyboard's plus and minus keys (the XAML accelerators cover the number pad).
