@@ -64,6 +64,28 @@ public sealed partial class SettingsPage : UserControl
         };
         content.Children.Add(Card("select", "Tool bar", "Drag the tool bar by its handle to either side of the page area.", reset));
 
+        var association = new StackPanel { Spacing = 6, HorizontalAlignment = HorizontalAlignment.Right };
+        var associate = new Button { Content = FileAssociation.IsRegistered ? "Choose in Windows settings" : "Set up" };
+        var status = new TextBlock { Opacity = 0.7, FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxWidth = 260 };
+        associate.Click += async (_, _) =>
+        {
+            try
+            {
+                FileAssociation.Register();
+                status.Text = "In the window that opens, choose VisyaDocs for .pdf.";
+                associate.Content = "Choose in Windows settings";
+                await FileAssociation.OpenDefaultAppsSettingsAsync();
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+            {
+                status.Text = "Windows did not allow the change: " + ex.Message;
+            }
+        };
+        association.Children.Add(associate);
+        association.Children.Add(status);
+        content.Children.Add(Card("pdf", "Open PDFs with VisyaDocs",
+            "Makes VisyaDocs available for PDF files in Windows. Windows then asks you to confirm it as the default app.", association));
+
         content.Children.Add(Section("Text recognition"));
         var languages = OcrService.AvailableLanguages;
         var ocr = new ComboBox { MinWidth = 220 };

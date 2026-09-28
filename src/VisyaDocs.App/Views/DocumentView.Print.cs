@@ -19,6 +19,7 @@ public sealed partial class DocumentView
     private async Task PrintAsync()
     {
         if (_pages.Count == 0 || _operation is not null) return;
+        if (!Permitted(_permissions.CanPrint, "printing")) return;
         CommitEditor();
 
         PrintJob? job;

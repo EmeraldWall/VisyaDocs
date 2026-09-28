@@ -110,6 +110,43 @@ public sealed partial class PageView : Grid
 
     public void ClearSelection() => _selection.Children.Clear();
 
+    /// <summary>Links of this page (jumps and web addresses), refreshed with the comment hotspots.</summary>
+    public IReadOnlyList<PdfLink> Links { get; set; } = [];
+
+    /// <summary>The link under a page space point, if any.</summary>
+    public PdfLink? LinkAt(double x, double y) => Links.FirstOrDefault(l => l.Bounds.Contains(x, y));
+
+    private Rectangle? _hover;
+
+    /// <summary>Outlines a page space rectangle (for example the text run Edit text would change), or hides it.</summary>
+    public void ShowHover(PdfRect? rect)
+    {
+        if (rect is not { } r)
+        {
+            if (_hover is not null) _hover.Visibility = Visibility.Collapsed;
+            return;
+        }
+        if (_hover is null)
+        {
+            _hover = new Rectangle
+            {
+                Stroke = new SolidColorBrush(ColorHelper.FromArgb(0xCC, 0x2B, 0x6F, 0xE0)),
+                StrokeThickness = 1.2,
+                StrokeDashArray = [3, 2],
+                Fill = new SolidColorBrush(ColorHelper.FromArgb(0x14, 0x2B, 0x6F, 0xE0)),
+                IsHitTestVisible = false,
+            };
+            _marks.Children.Add(_hover);
+        }
+        var v = Geometry.ToView(r.Inflate(1.5));
+        _hover.Width = v.Width;
+        _hover.Height = v.Height;
+        _hover.StrokeThickness = 1.2 / Math.Max(0.2, DipPerPoint);
+        Canvas.SetLeft(_hover, v.X);
+        Canvas.SetTop(_hover, v.Y);
+        _hover.Visibility = Visibility.Visible;
+    }
+
     /// <summary>Form fields of this page, refreshed with the comment hotspots.</summary>
     public IReadOnlyList<FormField> FormFields { get; set; } = [];
 

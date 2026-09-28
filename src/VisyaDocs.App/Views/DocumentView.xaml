@@ -29,21 +29,33 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <ListView x:Name="ThumbList" Width="176" Visibility="Collapsed" SelectionMode="Single" Padding="0,8,0,8"
-                      Background="{ThemeResource VisyaPaneBrush}" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="0,0,1,0"
-                      ContainerContentChanging="ThumbList_ContainerContentChanging" ItemClick="ThumbList_ItemClick" IsItemClickEnabled="True">
-                <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="local:ThumbnailItem">
-                        <StackPanel Padding="0,6" Spacing="4" HorizontalAlignment="Center">
-                            <Border Background="White" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1"
-                                    Width="{x:Bind Width}" Height="{x:Bind Height}">
-                                <Image Source="{x:Bind Image, Mode=OneWay}" Stretch="Uniform" />
-                            </Border>
-                            <TextBlock Text="{x:Bind Label}" HorizontalAlignment="Center" FontSize="12" Opacity="0.75" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+            <!-- Left pane: page thumbnails and, when the PDF has one, its outline (table of contents). -->
+            <Grid x:Name="LeftPane" Width="190" Visibility="Collapsed" Background="{ThemeResource VisyaPaneBrush}"
+                  BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="0,0,1,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <SelectorBar x:Name="LeftPaneTabs" Visibility="Collapsed" SelectionChanged="LeftPaneTabs_SelectionChanged">
+                    <SelectorBarItem x:Name="PagesTab" Text="Pages" IsSelected="True" />
+                    <SelectorBarItem x:Name="OutlineTab" Text="Outline" />
+                </SelectorBar>
+                <ListView x:Name="ThumbList" Grid.Row="1" SelectionMode="Single" Padding="0,8,0,8" RightTapped="ThumbList_RightTapped"
+                          ContainerContentChanging="ThumbList_ContainerContentChanging" ItemClick="ThumbList_ItemClick" IsItemClickEnabled="True">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="local:ThumbnailItem">
+                            <StackPanel Padding="0,6" Spacing="4" HorizontalAlignment="Center">
+                                <Border Background="White" BorderBrush="{ThemeResource VisyaBorderBrush}" BorderThickness="1"
+                                        Width="{x:Bind Width}" Height="{x:Bind Height}">
+                                    <Image Source="{x:Bind Image, Mode=OneWay}" Stretch="Uniform" />
+                                </Border>
+                                <TextBlock Text="{x:Bind Label}" HorizontalAlignment="Center" FontSize="12" Opacity="0.75" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+                <TreeView x:Name="OutlineTree" Grid.Row="1" Visibility="Collapsed" SelectionMode="Single" ItemInvoked="OutlineTree_ItemInvoked" />
+            </Grid>
 
             <!-- Page area: the rail, search, notices and page pill float inside it only, never over the side panes. -->
             <Grid x:Name="PageArea" Grid.Column="1">
@@ -216,6 +228,10 @@
                 <Border.Shadow><ThemeShadow /></Border.Shadow>
                 <StackPanel Orientation="Horizontal" Spacing="2">
                     <TextBox x:Name="SearchBox" Width="220" PlaceholderText="Search" KeyDown="SearchBox_KeyDown" />
+                    <ToggleButton x:Name="MatchCaseToggle" Content="Aa" Padding="6,0" Height="28" MinWidth="30" Click="SearchOption_Click"
+                                  ToolTipService.ToolTip="Match case" />
+                    <ToggleButton x:Name="WholeWordToggle" Content="W" Padding="6,0" Height="28" MinWidth="30" Click="SearchOption_Click"
+                                  ToolTipService.ToolTip="Whole words only" />
                     <Button Style="{StaticResource TitleBarButtonStyle}" ToolTipService.ToolTip="Previous match (Shift+Enter)" Click="SearchPrev_Click">
                         <FontIcon Glyph="&#xE70E;" FontSize="12" />
                     </Button>
@@ -237,7 +253,10 @@
                         <Button Content="Make searchable" Click="MakeSearchable_Click" />
                     </InfoBar.ActionButton>
                 </InfoBar>
-                <InfoBar x:Name="FormBar" Severity="Informational" IsOpen="False" Title="This document has a form"
+                <InfoBar x:Name="PermissionBar" Severity="Warning" IsOpen="False" Title="Protected by its author" />
+            <InfoBar x:Name="TipBar" Severity="Informational" IsOpen="False" Title="Welcome to VisyaDocs"
+                     Message="Reading and editing tools are on the tool bar at the side; drag its dots to move it. The File menu at the top has save, print, convert and settings. Press F1 for keyboard shortcuts." />
+            <InfoBar x:Name="FormBar" Severity="Informational" IsOpen="False" Title="This document has a form"
                          Message="Click a field to fill it in. Save to keep your entries." />
                 <InfoBar x:Name="MessageBar" IsOpen="False" />
                 <Border x:Name="ProgressPanel" Visibility="Collapsed" Padding="12,8" CornerRadius="10"

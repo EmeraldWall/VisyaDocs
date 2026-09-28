@@ -60,6 +60,7 @@ public sealed unsafe partial class PdfDocument
             Pdfium.FPDFImageObj_SetMatrix(image, pageWidth, 0, 0, pageHeight, 0, 0);
             Pdfium.FPDFPage_InsertObject(page, image);
             if (Pdfium.FPDFPage_GenerateContent(page) == 0) throw new PdfException("The page could not be created.");
+            BumpLayout();
         }
         finally
         {
@@ -72,6 +73,47 @@ public sealed unsafe partial class PdfDocument
     {
         if (Pdfium.FPDF_ImportPages(Handle, other.Handle, null, Pdfium.FPDF_GetPageCount(Handle)) == 0)
             throw new PdfException("The pages could not be imported.");
+        BumpLayout();
         return 0;
     });
+
+    /// <summary>Rotation of a page in quarter turns clockwise (0 to 3).</summary>
+    public int GetRotation(int pageIndex) => WithPage(pageIndex, page => Pdfium.FPDFPage_GetRotation(page));
+
+    /// <summary>Turns a page by quarter turns (positive = clockwise). Saved in the PDF and undoable.</summary>
+    public void RotatePage(int pageIndex, int quarterTurns) => Mutate(() => WithPage(pageIndex, page =>
+    {
+        int rotation = ((Pdfium.FPDFPage_GetRotation(page) + quarterTurns) % 4 + 4) % 4;
+        Pdfium.FPDFPage_SetRotation(page, rotation);
+        BumpLayout();
+        return 0;
+    }));
+
+    /// <summary>Removes a page. The last remaining page cannot be deleted.</summary>
+    public void DeletePage(int pageIndex) => Mutate(() =>
+    {
+        int count = Pdfium.FPDF_GetPageCount(Handle);
+        if ((uint)pageIndex >= (uint)count) throw new ArgumentOutOfRangeException(nameof(pageIndex));
+        if (count == 1) throw new PdfException("A document needs at least one page.");
+        Pdfium.FPDFPage_Delete(Handle, pageIndex);
+        BumpLayout();
+        return 0;
+    });
+
+    /// <summary>Copies the given pages (0 based) into a new, unsaved document.</summary>
+    public PdfDocument ExtractPages(IReadOnlyList<int> pages)
+    {
+        if (pages.Count == 0) throw new ArgumentException("No pages to extract.", nameof(pages));
+        var result = CreateEmpty();
+        string range = string.Join(",", pages.Select(p => (p + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        lock (Sync)
+        {
+            if (Pdfium.FPDF_ImportPages(result.Handle, Handle, range, 0) == 0)
+            {
+                result.Dispose();
+                throw new PdfException("The pages could not be extracted.");
+            }
+        }
+        return result;
+    }
 }

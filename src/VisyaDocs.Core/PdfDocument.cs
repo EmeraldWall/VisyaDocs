@@ -11,13 +11,19 @@ public sealed unsafe partial class PdfDocument : IDisposable
 {
     private const int MaxUndo = 30;
 
+    /// <summary>
+    /// Undo and redo keep a full copy of the file per step; this caps their total size so large
+    /// PDFs cannot exhaust memory (the newest step is always kept).
+    /// </summary>
+    internal static long MaxHistoryBytes = 256L * 1024 * 1024;
+
     internal static readonly Lock Sync = new();
     private static bool s_initialized;
 
     private nint _doc;
     private void* _buffer;
-    private readonly Stack<byte[]> _undo = new();
-    private readonly Stack<byte[]> _redo = new();
+    private readonly History _undo = new();
+    private readonly History _redo = new();
     private readonly string? _password;
 
     private PdfDocument(nint doc, void* buffer, string? password)
@@ -32,6 +38,14 @@ public sealed unsafe partial class PdfDocument : IDisposable
     public event EventHandler? Changed;
 
     public string? FilePath { get; private set; }
+
+    /// <summary>
+    /// Changes whenever pages may have been added, removed, rotated or resized (page tools, append,
+    /// undo, redo), so a viewer knows to measure its pages again.
+    /// </summary>
+    public int LayoutVersion { get; private set; }
+
+    internal void BumpLayout() => LayoutVersion++;
     public bool IsDirty { get; private set; }
     public bool CanUndo { get { lock (Sync) return _undo.Count > 0; } }
     public bool CanRedo { get { lock (Sync) return _redo.Count > 0; } }
@@ -175,6 +189,46 @@ public sealed unsafe partial class PdfDocument : IDisposable
         lock (Sync) return SnapshotLocked();
     }
 
+    /// <summary>True when the document needed a password to open.</summary>
+    public bool OpenedWithPassword => !string.IsNullOrEmpty(_password);
+
+    /// <summary>What the document allows with the password it was opened with (all for unprotected files).</summary>
+    public PdfPermissions Permissions
+    {
+        get
+        {
+            lock (Sync)
+            {
+                ulong bits = Pdfium.FPDF_GetDocPermissions(Handle).Value;
+                // Permission bits from the PDF specification (table 22): 3 print, 4 modify, 5 copy.
+                return new PdfPermissions((bits & (1 << 2)) != 0, (bits & (1 << 4)) != 0, (bits & (1 << 3)) != 0);
+            }
+        }
+    }
+
+    /// <summary>
+    /// A copy without the password may only be made by someone who could open the file with its
+    /// password and has full rights; otherwise it would bypass the author's restrictions.
+    /// </summary>
+    public bool CanRemovePassword => OpenedWithPassword && Permissions.All;
+
+    /// <summary>Saves an unprotected copy (the open document keeps its protection).</summary>
+    public void SaveCopyWithoutPassword(string path)
+    {
+        if (!CanRemovePassword) throw new PdfException("The password can only be removed from a file you opened with its password and full rights.");
+        byte[] bytes;
+        lock (Sync)
+        {
+            if (_form != 0) Pdfium.FORM_ForceToKillFocus(_form);
+            using var stream = new MemoryStream();
+            if (!Pdfium.SaveToStream(Handle, stream, removeSecurity: true)) throw new PdfException("The PDF could not be saved.");
+            bytes = stream.ToArray();
+        }
+        string temp = path + ".visya-tmp";
+        File.WriteAllBytes(temp, bytes);
+        File.Move(temp, path, overwrite: true);
+    }
+
     private byte[] SnapshotLocked()
     {
         if (_form != 0) Pdfium.FORM_ForceToKillFocus(_form);
@@ -187,13 +241,15 @@ public sealed unsafe partial class PdfDocument : IDisposable
 
     public void Redo() => Step(_redo, _undo);
 
-    private void Step(Stack<byte[]> from, Stack<byte[]> to)
+    private void Step(History from, History to)
     {
         lock (Sync)
         {
             if (from.Count == 0) return;
             to.Push(SnapshotLocked());
+            to.Trim(MaxUndo, MaxHistoryBytes);
             ReplaceLocked(from.Pop());
+            LayoutVersion++;
             IsDirty = true;
         }
         Changed?.Invoke(this, EventArgs.Empty);
@@ -225,7 +281,7 @@ public sealed unsafe partial class PdfDocument : IDisposable
                 throw;
             }
             _undo.Push(before);
-            if (_undo.Count > MaxUndo) TrimUndo();
+            _undo.Trim(MaxUndo, MaxHistoryBytes);
             _redo.Clear();
             IsDirty = true;
         }
@@ -233,11 +289,50 @@ public sealed unsafe partial class PdfDocument : IDisposable
         return result;
     }
 
-    private void TrimUndo()
+    /// <summary>A stack of file snapshots that forgets its oldest entries when it grows too large.</summary>
+    private sealed class History
     {
-        var keep = _undo.Take(MaxUndo).Reverse().ToArray();
-        _undo.Clear();
-        foreach (var s in keep) _undo.Push(s);
+        private readonly List<byte[]> _items = [];
+        private long _bytes;
+
+        public int Count => _items.Count;
+
+        public long Bytes => _bytes;
+
+        public void Push(byte[] snapshot)
+        {
+            _items.Add(snapshot);
+            _bytes += snapshot.LongLength;
+        }
+
+        public byte[] Pop()
+        {
+            var last = _items[^1];
+            _items.RemoveAt(_items.Count - 1);
+            _bytes -= last.LongLength;
+            return last;
+        }
+
+        public void Clear()
+        {
+            _items.Clear();
+            _bytes = 0;
+        }
+
+        public void Trim(int maxCount, long maxBytes)
+        {
+            while (_items.Count > 1 && (_items.Count > maxCount || _bytes > maxBytes))
+            {
+                _bytes -= _items[0].LongLength;
+                _items.RemoveAt(0);
+            }
+        }
+    }
+
+    /// <summary>Number of undo steps currently kept (for tests and diagnostics).</summary>
+    internal int UndoDepth
+    {
+        get { lock (Sync) return _undo.Count; }
     }
 
     /// <summary>Loads a page, runs the callback under the PDFium lock and closes the page.</summary>

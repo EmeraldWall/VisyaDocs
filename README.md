@@ -13,8 +13,21 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 - Layouts: continuous scroll, two pages side by side, two pages with the cover alone, single page (flip with PageUp/PageDown, arrow keys or the wheel)
 - Pinch to zoom on touchpads and touch screens, Ctrl + wheel, Ctrl+plus/minus, fit width, fit page
 - Full screen (F11, Esc to leave)
-- Thumbnails, search (Ctrl+F) with highlighted matches, text selection and copy
+- Thumbnails that follow the page you are reading, and an Outline tab with the PDF's bookmarks (table of contents)
+- Links work: internal links jump to their page, web links ask before opening in your browser
+- Search (Ctrl+F) with highlighted matches, Match case and Whole word options, text selection and copy
+- Reopening a file returns to the page and zoom where you left off
+- Keyboard shortcuts list (F1 or File > Keyboard shortcuts)
 - Document properties (Ctrl+D): title, author, dates, PDF version, page size, security and permissions
+
+**Pages**
+- Right click a thumbnail to rotate a page, delete it, or extract pages into a new PDF (opens in a new tab). All undoable
+
+**Password protected PDFs**
+- Opening asks for the password. Saving keeps the protection
+- File > "Save a copy without password" writes an unprotected copy, offered only for files you opened with their password. The original is not changed
+- Restrictions set by the author (no printing, copying or editing) are respected: those tools are disabled with a short explanation
+- Adding a password is not possible: PDFium, the PDF engine, can read encryption but cannot write it
 
 **Fill and sign**
 - **Fill PDF forms**: text fields, check boxes, radio buttons and drop-downs are filled in place and saved into the PDF
@@ -45,6 +58,9 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 - Icons are vector (SVG) and render sharp at any display scale
 - Color icons in Microsoft's Fluent style (see Third party notices)
 - Custom app icon and .pdf file icon (sources in `assets/icon`)
+- One window: opening another PDF from Explorer adds a tab to the running window
+- Settings > "Open PDFs with VisyaDocs" registers the app for .pdf files (current user, no admin) and opens Windows Default apps so you can pick it
+- Tool buttons have accessible names for screen readers
 
 ## Why it is light
 
@@ -113,6 +129,8 @@ build/                  PDFium download targets, icon export script
 - Text editing works on text runs as the PDF stores them. Some PDFs store one word or even one character per run, so an edit may cover a smaller piece than a whole line.
 - When the embedded font cannot show the new characters, the replacement uses Helvetica (or Arial for non Latin text), so the look can differ slightly from the original.
 - Text written into CJK scripts needs a font that covers them; Arial is used as the fallback.
+- Undo history is limited to 30 steps and about 256 MB, so very large files keep fewer steps.
+- Password protection cannot be added (see above).
 
 ## Third party notices
 

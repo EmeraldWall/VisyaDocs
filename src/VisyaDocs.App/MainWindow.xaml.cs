@@ -85,6 +85,21 @@ public sealed partial class MainWindow : Window
         UpdateTitleBarRegions();
     }
 
+    /// <summary>Shows a document created elsewhere in the app (for example extracted pages) in a new tab.</summary>
+    public void OpenDocument(PdfDocument doc, string name) => AddDocumentTab(doc, name);
+
+    /// <summary>Restores and focuses the window (used when another launch hands us a file).</summary>
+    public void BringToFront()
+    {
+        if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } presenter) presenter.Restore();
+        AppWindow.Show();
+        Activate();
+        SetForegroundWindow(WinRT.Interop.WindowNative.GetWindowHandle(this));
+    }
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial int SetForegroundWindow(nint hwnd);
+
     private static bool IsPdf(string path) => Path.GetExtension(path).Equals(".pdf", StringComparison.OrdinalIgnoreCase);
 
     private async Task OpenPdfAsync(string path)
@@ -192,6 +207,7 @@ public sealed partial class MainWindow : Window
         UpdateTabVisuals();
         UpdateWindowTitle();
         tab.Header.StartBringIntoView();
+        DispatcherQueue.TryEnqueue(tab.View.FocusViewer);
     }
 
     private void UpdateTabVisuals()
@@ -399,6 +415,52 @@ public sealed partial class MainWindow : Window
     {
         bool hasDocument = _active is not null;
         SaveItem.IsEnabled = SaveAsItem.IsEnabled = PrintItem.IsEnabled = PropertiesItem.IsEnabled = ConvertMenu.IsEnabled = hasDocument;
+        // Only for files opened with their password and full rights (see PdfDocument.CanRemovePassword).
+        RemovePasswordItem.Visibility = _active?.View.CanRemovePassword == true ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private async void Shortcuts_Click(object sender, RoutedEventArgs e) => await ShowShortcutsAsync();
+
+    private async void ShortcutsAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        await ShowShortcutsAsync();
+    }
+
+    private static readonly (string Keys, string Action)[] Shortcuts =
+    [
+        ("Ctrl+O", "Open a PDF"),
+        ("Ctrl+S / Ctrl+Shift+S", "Save / Save as"),
+        ("Ctrl+P", "Print"),
+        ("Ctrl+W / Ctrl+Tab", "Close tab / Next tab"),
+        ("Ctrl+F, Enter, Shift+Enter", "Search, next and previous match"),
+        ("Ctrl+Z / Ctrl+Y", "Undo / Redo"),
+        ("Ctrl+C / Ctrl+A", "Copy selected text / Select page text"),
+        ("Ctrl+Plus / Ctrl+Minus / Ctrl+0", "Zoom in / out / Fit width"),
+        ("Ctrl+Wheel or pinch", "Zoom"),
+        ("PageUp / PageDown / Home / End", "Move through pages"),
+        ("Ctrl+D", "Document properties"),
+        ("F11 / Esc", "Full screen / Leave full screen, cancel"),
+        ("F1", "This list"),
+    ];
+
+    private async Task ShowShortcutsAsync()
+    {
+        var grid = new Grid { ColumnSpacing = 24, RowSpacing = 8 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        for (int i = 0; i < Shortcuts.Length; i++)
+        {
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var keys = new TextBlock { Text = Shortcuts[i].Keys, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+            var action = new TextBlock { Text = Shortcuts[i].Action, TextWrapping = TextWrapping.Wrap };
+            Grid.SetRow(keys, i);
+            Grid.SetRow(action, i);
+            Grid.SetColumn(action, 1);
+            grid.Children.Add(keys);
+            grid.Children.Add(action);
+        }
+        await Dialogs.Create(Root.XamlRoot, "Keyboard shortcuts", new ScrollViewer { Content = grid }, "Close", null).ShowAsync();
     }
 
     private void DocCommand_Click(object sender, RoutedEventArgs e)

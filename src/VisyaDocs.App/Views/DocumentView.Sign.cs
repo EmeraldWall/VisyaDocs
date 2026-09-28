@@ -22,6 +22,7 @@ public sealed partial class DocumentView
     private async void Sign_Click(object sender, RoutedEventArgs e)
     {
         SignTool.IsChecked = _tool == EditTool.PlaceSignature;
+        if (!Permitted(_permissions.CanModify, "changes")) return;
         var signature = await SignatureDialog.ShowAsync(XamlRoot);
         if (signature is null) return;
         _pendingSignature = signature;
@@ -35,15 +36,16 @@ public sealed partial class DocumentView
     {
         var signature = await SignatureDialog.ShowAsync(XamlRoot);
         if (signature is null) return;
+        // Fit the signature into the field as it appears on screen, keeping its proportions.
+        var box = page.Geometry.ToView(field);
         double aspect = (double)signature.Height / signature.Width;
-        double w = field.Width, h = w * aspect;
-        if (h > field.Height)
+        double w = box.Width, h = w * aspect;
+        if (h > box.Height)
         {
-            h = field.Height;
+            h = box.Height;
             w = h / aspect;
         }
-        var rect = new PdfRect(field.Left + (field.Width - w) / 2, field.Bottom + (field.Height - h) / 2,
-            field.Left + (field.Width + w) / 2, field.Bottom + (field.Height + h) / 2);
+        var rect = new ViewRect(box.X + (box.Width - w) / 2, box.Y + (box.Height - h) / 2, w, h);
         await CommitSignatureAsync(page, signature, rect);
     }
 
@@ -130,13 +132,13 @@ public sealed partial class DocumentView
     private async Task AcceptSignaturePlacementAsync()
     {
         if (_signPage is not { } page || _pendingSignature is not { } signature) return;
-        var rect = page.Geometry.ToPage(_signRect);
+        var rect = _signRect;
         CancelSignaturePlacement();
         SetTool(EditTool.Select);
         await CommitSignatureAsync(page, signature, rect);
     }
 
-    private async Task CommitSignatureAsync(PageView page, SignatureImage signature, PdfRect rect)
+    private async Task CommitSignatureAsync(PageView page, SignatureImage signature, ViewRect rect)
     {
         await EditAsync("Could not place the signature", () =>
             _doc.AddImageStamp(page.Index, signature.Straight, signature.Width, signature.Height, rect));
@@ -144,8 +146,10 @@ public sealed partial class DocumentView
         {
             string date = DateTime.Now.ToString("d", System.Globalization.CultureInfo.CurrentCulture);
             double size = Math.Clamp(rect.Height * 0.3, 7, 12);
+            // Just below the signature as seen on screen (also on rotated pages).
+            var (x, y) = page.Geometry.ToPage(rect.X, rect.Y + rect.Height + size * 1.1);
             await EditAsync("Could not add the date", () =>
-                _doc.AddText(page.Index, rect.Left, rect.Bottom - size * 1.2, date, new TextStyle(size, new PdfColor(40, 40, 40))));
+                _doc.AddText(page.Index, x, y, date, new TextStyle(size, new PdfColor(40, 40, 40))));
         }
         ShowMessage("Signed", "The signature was added. Save to keep it.", InfoBarSeverity.Success, autoHide: true);
     }
