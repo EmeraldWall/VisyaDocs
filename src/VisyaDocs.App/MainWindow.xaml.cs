@@ -48,9 +48,9 @@ public sealed partial class MainWindow : Window
         };
         Root.SizeChanged += (_, _) => UpdateTitleBarRegions();
         Root.Loaded += (_, _) => UpdateTitleBarRegions();
-        TitleInteractive.SizeChanged += (_, _) => UpdateTitleBarRegions();
+        TabStrip.SizeChanged += (_, _) => UpdateTitleBarRegions();
+        TabScroller.SizeChanged += (_, _) => UpdateTitleBarRegions();
 
-        UpdateThemeMenu();
         RefreshRecent();
     }
 
@@ -134,7 +134,7 @@ public sealed partial class MainWindow : Window
             FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
-            MaxWidth = 180,
+            MaxWidth = 150,
         };
         var close = new Button
         {
@@ -149,7 +149,7 @@ public sealed partial class MainWindow : Window
         };
         ToolTipService.SetToolTip(close, "Close (Ctrl+W)");
         var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        content.Children.Add(new Image { Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/Icons/pdf.png")), Width = 14, Height = 14, VerticalAlignment = VerticalAlignment.Center });
+        content.Children.Add(new AppIcon { Icon = "pdf", Size = 14, VerticalAlignment = VerticalAlignment.Center });
         content.Children.Add(title);
         content.Children.Add(close);
         var header = new Border
@@ -160,6 +160,7 @@ public sealed partial class MainWindow : Window
             CornerRadius = new CornerRadius(6),
             VerticalAlignment = VerticalAlignment.Center,
             MinWidth = 90,
+            MaxWidth = 210,
         };
         ToolTipService.SetToolTip(header, doc.FilePath ?? name);
 
@@ -185,6 +186,7 @@ public sealed partial class MainWindow : Window
 
     private void Activate(DocTab tab)
     {
+        CloseSettings();
         _active = tab;
         foreach (var t in _tabs) t.View.Visibility = t == tab ? Visibility.Visible : Visibility.Collapsed;
         UpdateTabVisuals();
@@ -194,8 +196,7 @@ public sealed partial class MainWindow : Window
 
     private void UpdateTabVisuals()
     {
-        bool dark = Root.ActualTheme == ElementTheme.Dark;
-        var selected = new SolidColorBrush(dark ? ColorHelper.FromArgb(255, 36, 36, 36) : ColorHelper.FromArgb(255, 250, 250, 250));
+        var selected = new SolidColorBrush(ThemeService.SelectedTabColor(Root.ActualTheme));
         foreach (var t in _tabs)
         {
             t.Header.Background = t == _active ? selected : new SolidColorBrush(Colors.Transparent);
@@ -241,13 +242,12 @@ public sealed partial class MainWindow : Window
     private void UpdateWindowTitle()
     {
         string? title = _active?.View.Title;
-        TitleDocument.Text = string.Empty;
         Title = title is null ? "VisyaDocs" : $"{title} - VisyaDocs";
     }
 
     /// <summary>
-    /// The title bar row is the drag area; the menu button and the tabs must stay clickable, so
-    /// they are registered as pass-through regions (in physical pixels).
+    /// The title bar row is the drag area; the File button, the tabs and the + button must stay
+    /// clickable, so they are registered as pass-through regions (in physical pixels).
     /// </summary>
     private void UpdateTitleBarRegions()
     {
@@ -255,16 +255,51 @@ public sealed partial class MainWindow : Window
         double scale = Root.XamlRoot.RasterizationScale;
         CaptionInset.Width = new GridLength(AppWindow.TitleBar.RightInset / scale);
         var source = InputNonClientPointerSource.GetForWindowId(AppWindow.Id);
-        if (IsFullScreen || TitleInteractive.ActualWidth <= 0)
+        if (IsFullScreen)
         {
             source.ClearRegionRects(NonClientRegionKind.Passthrough);
             return;
         }
-        var origin = TitleInteractive.TransformToVisual(null).TransformPoint(new Windows.Foundation.Point(0, 0));
-        var rect = new RectInt32(
-            (int)Math.Round(origin.X * scale), (int)Math.Round(origin.Y * scale),
-            (int)Math.Round(TitleInteractive.ActualWidth * scale), (int)Math.Round(TitleInteractive.ActualHeight * scale));
-        source.SetRegionRects(NonClientRegionKind.Passthrough, [rect]);
+        RectInt32 Rect(FrameworkElement e, double width)
+        {
+            var p = e.TransformToVisual(null).TransformPoint(new Windows.Foundation.Point(0, 0));
+            return new RectInt32((int)Math.Round(p.X * scale), (int)Math.Round(p.Y * scale),
+                (int)Math.Round(width * scale), (int)Math.Round(e.ActualHeight * scale));
+        }
+        // Only the part of the tab area that actually holds tabs is clickable; the rest stays draggable.
+        double tabsWidth = Math.Min(TabScroller.ActualWidth, TabStrip.ActualWidth);
+        var rects = new List<RectInt32> { Rect(MenuButton, MenuButton.ActualWidth), Rect(NewTabButton, NewTabButton.ActualWidth) };
+        if (tabsWidth > 0) rects.Add(Rect(TabScroller, tabsWidth));
+        source.SetRegionRects(NonClientRegionKind.Passthrough, [.. rects]);
+    }
+
+    // Settings page ---------------------------------------------------------------------------
+
+    private SettingsPage? _settingsPage;
+
+    private void OpenSettings()
+    {
+        if (_settingsPage is null)
+        {
+            _settingsPage = new SettingsPage();
+            _settingsPage.CloseRequested += (_, _) => CloseSettings();
+            _settingsPage.SettingsChanged += (_, _) =>
+            {
+                ThemeService.Apply(this);
+                UpdateTabVisuals();
+                foreach (var tab in _tabs) tab.View.OnSettingsChanged();
+            };
+            SettingsHost.Children.Add(_settingsPage);
+        }
+        SettingsHost.Visibility = Visibility.Visible;
+    }
+
+    private void CloseSettings()
+    {
+        if (_settingsPage is null) return;
+        SettingsHost.Visibility = Visibility.Collapsed;
+        SettingsHost.Children.Clear();
+        _settingsPage = null;
     }
 
     // Menu ------------------------------------------------------------------------------------
@@ -277,7 +312,7 @@ public sealed partial class MainWindow : Window
         foreach (var path in recent)
         {
             var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-            content.Children.Add(new Image { Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/Icons/pdf.png")), Width = 16, Height = 16 });
+            content.Children.Add(new AppIcon { Icon = "pdf", Size = 16 });
             content.Children.Add(new TextBlock { Text = Path.GetFileName(path), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
             content.Children.Add(new TextBlock { Text = Path.GetDirectoryName(path), Opacity = 0.6, TextTrimming = TextTrimming.CharacterEllipsis });
             var button = new Button
@@ -299,12 +334,6 @@ public sealed partial class MainWindow : Window
         RecentMenu.IsEnabled = recent.Count > 0;
     }
 
-    private void UpdateThemeMenu()
-    {
-        ThemeSystemItem.IsChecked = AppSettings.Current.Theme == AppTheme.System;
-        ThemeLightItem.IsChecked = AppSettings.Current.Theme == AppTheme.Light;
-        ThemeDarkItem.IsChecked = AppSettings.Current.Theme == AppTheme.Dark;
-    }
 
     private async Task CreateFromImagesAsync(IReadOnlyList<string> images)
     {
@@ -361,25 +390,22 @@ public sealed partial class MainWindow : Window
         if (pdfs.Count > 0) await CreateMergedAsync(pdfs);
     }
 
-    private void ThemeItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: string tag } && Enum.TryParse<AppTheme>(tag, out var theme))
-        {
-            AppSettings.Current.Theme = theme;
-            AppSettings.Current.Save();
-            ThemeService.Apply(this);
-            UpdateThemeMenu();
-        }
-    }
 
     private void FullScreen_Click(object sender, RoutedEventArgs e) => ToggleFullScreen();
 
-    private async void Settings_Click(object sender, RoutedEventArgs e)
+    private void Settings_Click(object sender, RoutedEventArgs e) => OpenSettings();
+
+    private void AppMenu_Opening(object? sender, object e)
     {
-        await SettingsDialog.ShowAsync(Root.XamlRoot);
-        ThemeService.Apply(this);
-        UpdateThemeMenu();
-        foreach (var tab in _tabs) tab.View.OnThemeChanged();
+        bool hasDocument = _active is not null;
+        SaveItem.IsEnabled = SaveAsItem.IsEnabled = PrintItem.IsEnabled = PropertiesItem.IsEnabled = ConvertMenu.IsEnabled = hasDocument;
+    }
+
+    private void DocCommand_Click(object sender, RoutedEventArgs e)
+    {
+        if (_active is null || sender is not FrameworkElement { Tag: string tag } || !Enum.TryParse<DocCommand>(tag, out var command)) return;
+        CloseSettings();
+        _active.View.Execute(command);
     }
 
     private async void OpenAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)

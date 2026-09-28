@@ -8,6 +8,7 @@ Writes into src/VisyaDocs.App/Assets:
   *.png               MSIX logo set (tiles, store logo, splash screen, target sizes)
 """
 import io
+import shutil
 import struct
 from pathlib import Path
 
@@ -64,6 +65,9 @@ def main() -> None:
     write_png("SplashScreen.scale-200.png", 1240, 600, 360)
     write_png("PdfFileLogo.png", 64, 64, 64, "visyadocs-pdf.svg")
     write_png("AppLogo.png", 96, 96, 96)
+    # Vector copies for in-app use (title bar, home page): sharp at every display scale.
+    shutil.copy(SRC / "visyadocs.svg", OUT / "AppLogo.svg")
+    shutil.copy(SRC / "visyadocs-small.svg", OUT / "AppLogoSmall.svg")
 
 
 if __name__ == "__main__":

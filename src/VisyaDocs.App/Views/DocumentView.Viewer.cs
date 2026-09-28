@@ -121,7 +121,9 @@ public sealed partial class DocumentView
         var rows = BuildRows();
         double viewport = Math.Max(1, Scroller.ViewportWidth / Math.Max(0.01, Scroller.ZoomFactor));
         double widest = rows.Max(r => r.Sum(i => _pages[i].Width) + PageGap * (r.Length - 1));
-        double canvasWidth = Math.Max(viewport, widest + 2 * PagePadding);
+        // Pages are centered in the space the docked tool rail leaves free.
+        double left = LeftInset, right = RightInset;
+        double canvasWidth = Math.Max(viewport, widest + 2 * PagePadding + left + right);
         _tops = new double[_pages.Count];
 
         double y = PagePadding, contentHeight = 0;
@@ -129,7 +131,7 @@ public sealed partial class DocumentView
         {
             double rowWidth = row.Sum(i => _pages[i].Width) + PageGap * (row.Length - 1);
             double rowHeight = row.Max(i => _pages[i].Height);
-            double x = (canvasWidth - rowWidth) / 2;
+            double x = left + (canvasWidth - left - right - rowWidth) / 2;
             double top = IsSinglePage ? PagePadding : y;
             foreach (int i in row)
             {
@@ -172,7 +174,7 @@ public sealed partial class DocumentView
             ViewLayout.SinglePage => "view-single",
             _ => "view-continuous",
         };
-        ViewButtonIcon.Source = new BitmapImage(new Uri($"ms-appx:///Assets/Icons/{icon}.png"));
+        ViewButtonIcon.Icon = icon;
     }
 
     // Zoom ------------------------------------------------------------------------------------
@@ -183,7 +185,7 @@ public sealed partial class DocumentView
         var rows = BuildRows();
         double widestPt = rows.Max(r => r.Sum(i => _pages[i].Geometry.ViewWidth));
         int maxGaps = rows.Max(r => r.Length - 1);
-        double available = Math.Max(100, Scroller.ViewportWidth - 2 * PagePadding - 16 - PageGap * maxGaps);
+        double available = Math.Max(100, Scroller.ViewportWidth - 2 * PagePadding - 16 - PageGap * maxGaps - LeftInset - RightInset);
         return available / (widestPt * PtToDip);
     }
 
@@ -196,31 +198,85 @@ public sealed partial class DocumentView
         return Math.Min(FitWidthZoom(), available / (tallestPt * PtToDip));
     }
 
-    /// <summary>Changes the zoom, keeping the same spot of the current page at the top of the view.</summary>
-    private void SetZoom(double zoom, ZoomKind kind = ZoomKind.Custom)
-    {
-        zoom = Math.Clamp(zoom, 0.1, 8);
-        CommitEditor();
-        int anchor = Math.Clamp(_currentPage, 0, Math.Max(0, _pages.Count - 1));
-        double within = _pages.Count > 0 && _tops.Length == _pages.Count && _pages[anchor].Height > 0
-            ? (Scroller.VerticalOffset - _tops[anchor]) / _pages[anchor].Height
-            : 0;
+    /// <summary>A spot on a page (relative position) used to keep the view steady across zoom changes.</summary>
+    private readonly record struct ZoomAnchor(int Page, double U, double V, double ScreenX, double ScreenY);
 
+    /// <summary>Finds the page point under a viewport position (default: the viewport center).</summary>
+    private ZoomAnchor? CaptureAnchor(double screenX, double screenY)
+    {
+        if (_pages.Count == 0 || _tops.Length != _pages.Count) return null;
+        var p = Scroller.TransformToVisual(PagesCanvas).TransformPoint(new Windows.Foundation.Point(screenX, screenY));
+        int best = -1;
+        double bestDistance = double.MaxValue;
+        for (int i = 0; i < _pages.Count; i++)
+        {
+            var page = _pages[i];
+            if (page.Visibility != Visibility.Visible) continue;
+            double l = Canvas.GetLeft(page), t = Canvas.GetTop(page);
+            double dx = Math.Max(0, Math.Max(l - p.X, p.X - (l + page.Width)));
+            double dy = Math.Max(0, Math.Max(t - p.Y, p.Y - (t + page.Height)));
+            double d = dx * dx + dy * dy;
+            if (d < bestDistance)
+            {
+                bestDistance = d;
+                best = i;
+                if (d == 0) break;
+            }
+        }
+        if (best < 0) return null;
+        var hit = _pages[best];
+        return new ZoomAnchor(best,
+            (p.X - Canvas.GetLeft(hit)) / Math.Max(1, hit.Width),
+            (p.Y - Canvas.GetTop(hit)) / Math.Max(1, hit.Height),
+            screenX, screenY);
+    }
+
+    /// <summary>Scrolls so the anchored page point is back under the same viewport position, at zoom factor 1.</summary>
+    private void RestoreAnchor(ZoomAnchor? anchor)
+    {
+        if (anchor is not { } a || a.Page >= _pages.Count)
+        {
+            Scroller.ChangeView(null, null, 1f, true);
+            return;
+        }
+        var page = _pages[a.Page];
+        double x = Canvas.GetLeft(page) + a.U * page.Width - a.ScreenX;
+        double y = Canvas.GetTop(page) + a.V * page.Height - a.ScreenY;
+        Scroller.ChangeView(Math.Max(0, x), Math.Max(0, y), 1f, true);
+    }
+
+    /// <summary>Applies a new zoom and relayouts, keeping the page point under the viewport center steady.</summary>
+    private void SetZoom(double zoom, ZoomKind kind = ZoomKind.Custom) =>
+        ApplyZoom(zoom, kind, CaptureAnchor(Scroller.ViewportWidth / 2, Scroller.ViewportHeight / 2));
+
+    private void ApplyZoom(double zoom, ZoomKind kind, ZoomAnchor? anchor)
+    {
+        zoom = Math.Clamp(zoom, MinZoom, MaxZoom);
+        CommitEditor();
         _zoom = zoom;
         _zoomKind = kind;
         foreach (var page in _pages) page.SetScale(zoom * PtToDip);
         LayoutPages();
         ZoomText.Text = $"{zoom * 100:0}%";
         PagesCanvas.UpdateLayout();
-        if (_pages.Count > 0 && _tops.Length == _pages.Count)
-        {
-            double y = IsSinglePage ? 0 : _tops[anchor] + within * _pages[anchor].Height;
-            double x = Math.Max(0, (PagesCanvas.Width - Scroller.ViewportWidth) / 2);
-            Scroller.ChangeView(x, Math.Max(0, y), 1f, true);
-        }
+        if (IsSinglePage) Scroller.ChangeView(null, 0, 1f, true);
+        else RestoreAnchor(anchor);
+        UpdateZoomLimits();
         ShowStatusPill();
         UpdateVisiblePages();
         if (_tool == EditTool.FillForm) RefreshFormOverlays();
+    }
+
+    private const double MinZoom = 0.1, MaxZoom = 8;
+
+    /// <summary>
+    /// The ScrollViewer's own zoom (pinch, Ctrl+wheel) is relative to the current page zoom; keep its
+    /// limits matched to the absolute limits so a gesture never overshoots and snaps back.
+    /// </summary>
+    private void UpdateZoomLimits()
+    {
+        Scroller.MinZoomFactor = (float)Math.Clamp(MinZoom / _zoom, 0.1, 1);
+        Scroller.MaxZoomFactor = (float)Math.Clamp(MaxZoom / _zoom, 1, 10);
     }
 
     private void StepZoom(int direction)
@@ -234,25 +290,13 @@ public sealed partial class DocumentView
     /// <summary>
     /// Pinch (touch or touchpad) and Ctrl+wheel zoom the ScrollViewer smoothly, which only stretches
     /// the bitmaps. When the gesture ends, the factor is folded into the page zoom and the pages are
-    /// re-rendered sharp, keeping the same point centered.
+    /// re-rendered sharp, with the page point at the viewport center kept exactly in place.
     /// </summary>
     private void FoldZoomFactor()
     {
         float factor = Scroller.ZoomFactor;
-        double cx = (Scroller.HorizontalOffset + Scroller.ViewportWidth / 2) / factor;
-        double cy = (Scroller.VerticalOffset + Scroller.ViewportHeight / 2) / factor;
-        double newZoom = Math.Clamp(_zoom * factor, 0.1, 8);
-        double ratio = newZoom / _zoom;
-
-        _zoom = newZoom;
-        _zoomKind = ZoomKind.Custom;
-        foreach (var page in _pages) page.SetScale(newZoom * PtToDip);
-        LayoutPages();
-        ZoomText.Text = $"{newZoom * 100:0}%";
-        PagesCanvas.UpdateLayout();
-        Scroller.ChangeView(Math.Max(0, cx * ratio - Scroller.ViewportWidth / 2), Math.Max(0, cy * ratio - Scroller.ViewportHeight / 2), 1f, true);
-        ShowStatusPill();
-        if (_tool == EditTool.FillForm) RefreshFormOverlays();
+        var anchor = CaptureAnchor(Scroller.ViewportWidth / 2, Scroller.ViewportHeight / 2);
+        ApplyZoom(_zoom * factor, ZoomKind.Custom, anchor);
     }
 
     private void ZoomIn_Click(object sender, RoutedEventArgs e) => StepZoom(+1);
