@@ -98,7 +98,7 @@
                                 <MenuFlyoutItem.Icon><ImageIcon Source="{ThemeResource Icon.append-images}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                         </MenuFlyoutSubItem>
-                        <MenuFlyoutItem x:Name="RemovePasswordItem" Text="Save a copy without password..." AccessKey="W" Tag="RemovePassword" Click="DocCommand_Click">
+                        <MenuFlyoutItem x:Name="RemovePasswordItem" Text="Remove password and restrictions..." AccessKey="W" Tag="RemovePassword" Click="DocCommand_Click">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE785;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                         <MenuFlyoutItem x:Name="PropertiesItem" Text="Properties" Tag="Properties" AccessKey="I" Click="DocCommand_Click" KeyboardAcceleratorTextOverride="Ctrl+D">
@@ -140,7 +140,8 @@
                     <TextBlock Text="Read, fill, sign, comment and convert PDFs. Scanned pages become searchable with the OCR built into Windows."
                                Opacity="0.7" TextWrapping="Wrap" />
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="12">
+                <!-- The cards wrap onto more rows in a narrow window. -->
+                <VariableSizedWrapGrid Orientation="Horizontal" ItemWidth="222" ItemHeight="128">
                     <Button Style="{StaticResource HomeCardButtonStyle}" Click="Open_Click">
                         <StackPanel Spacing="10">
                             <local:AppIcon Icon="open" Size="32" HorizontalAlignment="Left" />
@@ -162,7 +163,7 @@
                             <TextBlock Text="Combine files into one" Opacity="0.65" FontSize="12" />
                         </StackPanel>
                     </Button>
-                </StackPanel>
+                </VariableSizedWrapGrid>
                 <StackPanel x:Name="RecentSection" Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <local:AppIcon Icon="recent" Size="16" />

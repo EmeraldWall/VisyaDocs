@@ -40,19 +40,33 @@ public sealed partial class DocumentView
         return false;
     }
 
-    /// <summary>True when the document can be saved as an unprotected copy (opened with its password, full rights).</summary>
-    public bool CanRemovePassword => _doc.CanRemovePassword;
+    /// <summary>True when the file is encrypted (open password, author restrictions or both).</summary>
+    public bool CanRemoveProtection => _doc.IsEncrypted;
 
-    /// <summary>Saves a copy without the password after asking where.</summary>
+    /// <summary>
+    /// Saves a copy without encryption: no password and no restrictions. The copy opens in a new
+    /// tab; the original file is not changed.
+    /// </summary>
     public async Task RemovePasswordAsync()
     {
-        if (!_doc.CanRemovePassword) return;
+        if (!_doc.IsEncrypted) return;
+        if (!_permissions.All)
+        {
+            var confirm = Dialogs.Create(XamlRoot, "Remove the restrictions?", new TextBlock
+            {
+                Text = "The author of this PDF limited printing, copying or changes. VisyaDocs can save a copy without these "
+                    + "restrictions and without a password. Only do this for documents you have the right to use this way.",
+                TextWrapping = TextWrapping.Wrap,
+            }, "Save unrestricted copy");
+            if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
+        }
         var path = await Pickers.SaveFileAsync(Path.GetFileNameWithoutExtension(_name) + " (unlocked)", "PDF document", ".pdf");
         if (path is null) return;
         try
         {
-            await Task.Run(() => _doc.SaveCopyWithoutPassword(path));
-            ShowMessage("Saved without password", $"{path}. The open file keeps its password.", InfoBarSeverity.Success);
+            await Task.Run(() => _doc.SaveUnprotectedCopy(path));
+            ShowMessage("Unprotected copy saved", $"{path} opens in a new tab. The original file keeps its protection.", InfoBarSeverity.Success);
+            App.MainWindow.OpenFiles([path]);
         }
         catch (Exception e) when (e is PdfException or IOException or UnauthorizedAccessException)
         {
@@ -151,8 +165,9 @@ public sealed partial class DocumentView
     // Author restrictions ---------------------------------------------------------------------
 
     /// <summary>
-    /// PDFs can carry the author's restrictions (no printing, copying or changes). They are
-    /// respected: the matching tools are disabled and a notice explains why.
+    /// PDFs can carry the author's restrictions (no printing, copying or changes). Editing and copying
+    /// tools are turned off in the original; printing asks first; "Remove restrictions" saves a
+    /// copy without them.
     /// </summary>
     private void ApplyPermissions()
     {
@@ -162,9 +177,11 @@ public sealed partial class DocumentView
         if (!_permissions.CanModify) blocked.Add("changes");
         foreach (var tool in (ToggleButton[])[EditTextTool, AddTextTool, SignTool]) tool.IsEnabled = _permissions.CanModify;
         if (blocked.Count == 0) return;
-        PermissionBar.Message = $"The author does not allow {string.Join(", ", blocked)} for this PDF. Those tools are turned off.";
+        PermissionBar.Message = $"The author restricted {string.Join(", ", blocked)} for this PDF. You can print anyway, or save an unrestricted copy.";
         PermissionBar.IsOpen = true;
     }
+
+    private async void RemoveRestrictions_Click(object sender, RoutedEventArgs e) => await RemovePasswordAsync();
 
     private bool Permitted(bool allowed, string action)
     {

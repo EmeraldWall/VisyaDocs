@@ -55,7 +55,12 @@ public sealed partial class DocumentView : UserControl, IDisposable
         UpdateUndoRedo();
         UpdateLayoutMenu();
         SetRailCollapsed(AppSettings.Current.RailCollapsed);
-        PageArea.SizeChanged += (_, _) => PositionRail();
+        PageArea.SizeChanged += (_, _) =>
+        {
+            PositionRail();
+            ArrangeOverlays();
+        };
+        SizeChanged += (_, _) => FitPanes();
         SetUpMotion();
     }
 
@@ -318,6 +323,7 @@ public sealed partial class DocumentView : UserControl, IDisposable
     private void OpenSearch()
     {
         SearchPanel.Visibility = Visibility.Visible;
+        ArrangeOverlays();
         SearchBox.Focus(FocusState.Keyboard);
         SearchBox.SelectAll();
     }
@@ -327,6 +333,7 @@ public sealed partial class DocumentView : UserControl, IDisposable
     private void CloseSearch()
     {
         SearchPanel.Visibility = Visibility.Collapsed;
+        ArrangeOverlays();
         SearchBox.Text = string.Empty;
         ClearSearchMarks();
         Scroller.Focus(FocusState.Programmatic);
@@ -395,17 +402,27 @@ public sealed partial class DocumentView : UserControl, IDisposable
 
     private void ShowSidePane(string title, bool comments)
     {
+        // In a narrow window the side pane takes the place of the thumbnails.
+        if (LeftPane.Visibility == Visibility.Visible && ActualWidth - LeftPane.Width - SidePane.Width < MinPageAreaWidth)
+        {
+            SetThumbnailsVisible(false);
+            _thumbsAutoHidden = true;
+        }
         SidePaneTitle.Text = title;
         CommentsPanel.Visibility = comments ? Visibility.Visible : Visibility.Collapsed;
         TextPanel.Visibility = comments ? Visibility.Collapsed : Visibility.Visible;
         SidePane.Visibility = Visibility.Visible;
         CommentsToggle.IsChecked = comments;
+        FitPanes();
     }
 
-    private void CloseSidePane_Click(object sender, RoutedEventArgs e)
+    private void CloseSidePane_Click(object sender, RoutedEventArgs e) => CloseSidePane();
+
+    private void CloseSidePane()
     {
         SidePane.Visibility = Visibility.Collapsed;
         CommentsToggle.IsChecked = false;
+        FitPanes();
     }
 
     // Commands --------------------------------------------------------------------------------

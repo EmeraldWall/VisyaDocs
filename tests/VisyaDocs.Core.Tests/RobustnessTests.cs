@@ -111,11 +111,11 @@ public class RobustnessTests
         using (var again = PdfDocument.Load(saved, "open123")) Assert.Contains("Edited", again.GetPageText(0));
 
         // Remove password: only a copy, readable without a password.
-        Assert.True(doc.CanRemovePassword);
+        Assert.True(doc.IsEncrypted);
         string path = Path.Combine(Path.GetTempPath(), $"visya-unlocked-{Guid.NewGuid():N}.pdf");
         try
         {
-            doc.SaveCopyWithoutPassword(path);
+            doc.SaveUnprotectedCopy(path);
             using var unlocked = PdfDocument.Open(path);
             Assert.False(unlocked.GetProperties().Encrypted);
             Assert.Contains("Secret page", unlocked.GetPageText(0));
@@ -128,18 +128,35 @@ public class RobustnessTests
     }
 
     [Fact]
-    public void RestrictionsAreReportedAndNotRemovable()
+    public void RestrictionsAreReportedAndCanBeRemovedIntoACopy()
     {
         using var doc = PdfDocument.Open(Asset("restricted.pdf"));
         Assert.False(doc.OpenedWithPassword);
         var permissions = doc.Permissions;
         Assert.False(permissions.CanPrint);
         Assert.False(permissions.CanCopy);
-        Assert.False(doc.CanRemovePassword);
-        Assert.Throws<PdfException>(() => doc.SaveCopyWithoutPassword(Path.Combine(Path.GetTempPath(), "never.pdf")));
+        Assert.True(doc.IsEncrypted);
+        string text = doc.GetPageText(0);
+
+        string path = Path.Combine(Path.GetTempPath(), $"visya-unrestricted-{Guid.NewGuid():N}.pdf");
+        try
+        {
+            doc.SaveUnprotectedCopy(path);
+            using var copy = PdfDocument.Open(path);
+            Assert.False(copy.IsEncrypted);
+            Assert.True(copy.Permissions.All);
+            Assert.Equal(text, copy.GetPageText(0));
+            // The open document keeps its restrictions.
+            Assert.False(doc.Permissions.CanPrint);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
 
         using var plain = PdfDocumentTests.CreateDocWithText();
         Assert.True(plain.Permissions.All);
-        Assert.False(plain.CanRemovePassword);
+        Assert.False(plain.IsEncrypted);
+        Assert.Throws<PdfException>(() => plain.SaveUnprotectedCopy(Path.Combine(Path.GetTempPath(), "never.pdf")));
     }
 }

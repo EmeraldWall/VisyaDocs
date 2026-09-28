@@ -636,6 +636,15 @@ public sealed partial class DocumentView
     private void ThumbsToggle_Click(object sender, RoutedEventArgs e)
     {
         bool show = ThumbsToggle.IsChecked == true;
+        _thumbsAutoHidden = false;
+        // In a narrow window the thumbnails take the place of the side pane.
+        if (show && ActualWidth - LeftPane.Width - SidePaneWidth < MinPageAreaWidth) CloseSidePane();
+        SetThumbnailsVisible(show);
+    }
+
+    private void SetThumbnailsVisible(bool show)
+    {
+        ThumbsToggle.IsChecked = show;
         if (show && _thumbs.Count != _pages.Count) BuildThumbnails();
         LeftPane.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         if (show) SyncThumbnail();

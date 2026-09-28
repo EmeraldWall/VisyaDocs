@@ -19,7 +19,15 @@ public sealed partial class DocumentView
     private async Task PrintAsync()
     {
         if (_pages.Count == 0 || _operation is not null) return;
-        if (!Permitted(_permissions.CanPrint, "printing")) return;
+        if (!_permissions.CanPrint)
+        {
+            var confirm = Services.Dialogs.Create(XamlRoot, "Print anyway?", new TextBlock
+            {
+                Text = "The author of this PDF does not allow printing. Only print it if you have the right to.",
+                TextWrapping = TextWrapping.Wrap,
+            }, "Print");
+            if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
+        }
         CommitEditor();
 
         PrintJob? job;

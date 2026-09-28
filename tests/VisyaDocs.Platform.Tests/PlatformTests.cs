@@ -109,4 +109,30 @@ public class PlatformTests(ITestOutputHelper output)
             File.Delete(file);
         }
     }
+
+    [Fact]
+    public void PrintsAPdfWhoseAuthorRestrictedPrinting()
+    {
+        // The app asks before printing such a file; the engine must still produce the pages.
+        using var doc = PdfDocument.Open(Path.Combine(AppContext.BaseDirectory, "assets", "restricted.pdf"));
+        Assert.False(doc.Permissions.CanPrint);
+        string file = Path.Combine(Path.GetTempPath(), $"visya-print-restricted-{Guid.NewGuid():N}.pdf");
+        try
+        {
+            if (!PrintService.PrintToPrinter(doc, "Microsoft Print to PDF", [0], "VisyaDocs test", file))
+            {
+                output.WriteLine("\"Microsoft Print to PDF\" is not installed on this machine; skipping.");
+                return;
+            }
+            using var printed = PdfDocument.Open(file);
+            Assert.Equal(1, printed.PageCount);
+            var g = printed.GetGeometry(0);
+            byte[] pixels = printed.RenderPage(0, 200, (int)(200 * g.ViewHeight / g.ViewWidth));
+            Assert.Contains(pixels, b => b < 100);   // the page content was printed, not a blank sheet
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
 }

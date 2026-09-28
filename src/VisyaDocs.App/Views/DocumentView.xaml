@@ -76,7 +76,8 @@
                 <Border.Shadow>
                     <ThemeShadow />
                 </Border.Shadow>
-                <ScrollViewer VerticalScrollBarVisibility="Hidden" VerticalScrollMode="Auto" HorizontalScrollMode="Disabled">
+                <!-- When the window is short the tool bar scrolls; the thin scroll bar shows that more tools follow. -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto" HorizontalScrollMode="Disabled">
                     <!-- Keyboard: the tool bar is one Tab stop; Up and Down move between its buttons. -->
                     <StackPanel x:Name="RailPanel" Spacing="2" XYFocusKeyboardNavigation="Enabled" TabFocusNavigation="Once">
                         <!-- Grip: drag to move the tool bar to either side; the chevron folds it. -->
@@ -261,7 +262,11 @@
                         <Button Content="Make searchable" Click="MakeSearchable_Click" />
                     </InfoBar.ActionButton>
                 </InfoBar>
-                <InfoBar x:Name="PermissionBar" Severity="Warning" IsOpen="False" Title="Protected by its author" />
+                <InfoBar x:Name="PermissionBar" Severity="Warning" IsOpen="False" Title="Restricted by its author">
+                    <InfoBar.ActionButton>
+                        <Button Content="Remove restrictions" Click="RemoveRestrictions_Click" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
             <InfoBar x:Name="TipBar" Severity="Informational" IsOpen="False" Title="Welcome to VisyaDocs"
                      Message="Reading and editing tools are on the tool bar at the side; drag its dots to move it. Menu at the top left has open, save, print, convert and settings. Press Alt to see key letters for every button, and F1 for keyboard shortcuts." />
             <InfoBar x:Name="FormBar" Severity="Informational" IsOpen="False" Title="This document has a form"

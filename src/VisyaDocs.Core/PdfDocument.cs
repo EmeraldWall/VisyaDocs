@@ -206,16 +206,19 @@ public sealed unsafe partial class PdfDocument : IDisposable
         }
     }
 
-    /// <summary>
-    /// A copy without the password may only be made by someone who could open the file with its
-    /// password and has full rights; otherwise it would bypass the author's restrictions.
-    /// </summary>
-    public bool CanRemovePassword => OpenedWithPassword && Permissions.All;
-
-    /// <summary>Saves an unprotected copy (the open document keeps its protection).</summary>
-    public void SaveCopyWithoutPassword(string path)
+    /// <summary>True when the file is encrypted: it has an open password, the author's restrictions, or both.</summary>
+    public bool IsEncrypted
     {
-        if (!CanRemovePassword) throw new PdfException("The password can only be removed from a file you opened with its password and full rights.");
+        get { lock (Sync) return Pdfium.FPDF_GetSecurityHandlerRevision(Handle) >= 0; }
+    }
+
+    /// <summary>
+    /// Saves a copy without encryption: no password to open it and no restrictions on printing,
+    /// copying or changes. The open document (and its file) keep their protection.
+    /// </summary>
+    public void SaveUnprotectedCopy(string path)
+    {
+        if (!IsEncrypted) throw new PdfException("This PDF is not password protected or restricted.");
         byte[] bytes;
         lock (Sync)
         {

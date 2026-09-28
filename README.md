@@ -18,6 +18,7 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 - Search (Ctrl+F) with highlighted matches, Match case and Whole word options, text selection and copy
 - Reopening a file returns to the page and zoom where you left off
 - Keyboard shortcuts list (F1 or Menu > Keyboard shortcuts)
+- Resizing keeps everything in its place: the window has a minimum size, the thumbnails and side pane make room so the page area stays readable (thumbnails come back when there is space), and the tool bar, notices and search box stay inside the page area (the tool bar scrolls when the window is short)
 - Full keyboard use: Tab moves between controls (the tool bar is one stop, Up and Down move inside it), F6 jumps between areas, Alt shows a key letter on every button, tabs are reachable with Tab and the arrow keys, Space pages through the document, Ctrl+G goes to a page
 - Smooth motion: zoom commands glide to the new size, nearby page jumps scroll, single pages slide when flipped, panels fade and slide in. All of it is skipped when animations are turned off in Windows
 - Document properties (Ctrl+D): title, author, dates, PDF version, page size, security and permissions
@@ -25,10 +26,10 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 **Pages**
 - Right click a thumbnail to rotate a page, delete it, or extract pages into a new PDF (opens in a new tab). All undoable
 
-**Password protected PDFs**
+**Password protected and restricted PDFs**
 - Opening asks for the password. Saving keeps the protection
-- Menu > "Save a copy without password" writes an unprotected copy, offered only for files you opened with their password. The original is not changed
-- Restrictions set by the author (no printing, copying or editing) are respected: those tools are disabled with a short explanation
+- Menu > "Remove password and restrictions" saves a copy without encryption: no password and no limits on printing, copying or changes. The copy opens in a new tab and the original file is not changed. For files whose author restricted them, VisyaDocs asks first and reminds you to do this only for documents you have the right to use that way (the same thing `qpdf --decrypt` does)
+- Printing a PDF whose author disallowed printing asks for confirmation, then prints normally
 - Adding a password is not possible: PDFium, the PDF engine, can read encryption but cannot write it
 
 **Fill and sign**
