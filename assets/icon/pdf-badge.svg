@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 64">
+  <!-- "PDF" tag drawn over the app logo for the .pdf file icon. Letters are strokes, so no font is needed. -->
+  <defs>
+    <linearGradient id="band" x1="0" y1="0" x2="120" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF6F47"/>
+      <stop offset="1" stop-color="#D7257D"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="116" height="60" rx="14" fill="url(#band)" stroke="#FFFFFF" stroke-width="4"/>
+  <path d="M24 48V16h14a10 10 0 0 1 0 20H24M56 48V16h9a16 16 0 0 1 0 32ZM88 48V16h20M88 32h16"
+        fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

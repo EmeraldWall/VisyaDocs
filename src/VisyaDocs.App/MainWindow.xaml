@@ -34,7 +34,7 @@
                 <ColumnDefinition Width="46" />
                 <ColumnDefinition x:Name="CaptionInset" Width="138" />
             </Grid.ColumnDefinitions>
-            <Image Source="ms-appx:///Assets/AppLogoSmall.svg" Width="16" Height="16" Margin="12,0,8,0" VerticalAlignment="Center" />
+            <Image Source="ms-appx:///Assets/AppLogoSmall.png" Width="16" Height="16" Margin="12,0,8,0" VerticalAlignment="Center" />
 
             <Button x:Name="MenuButton" Grid.Column="1" Height="28" Padding="8,0" VerticalAlignment="Center"
                     Background="Transparent" BorderThickness="0" CornerRadius="6" ToolTipService.ToolTip="Menu (Alt, M)" AccessKey="M">
@@ -135,7 +135,7 @@
         <ScrollViewer x:Name="HomePanel" Grid.Row="1">
             <StackPanel MaxWidth="720" Margin="32,56,32,32" Spacing="28" HorizontalAlignment="Center">
                 <StackPanel Spacing="6">
-                    <Image Source="ms-appx:///Assets/AppLogo.svg" Width="64" Height="64" HorizontalAlignment="Left" />
+                    <Image Source="ms-appx:///Assets/AppLogo.png" Width="64" Height="64" HorizontalAlignment="Left" />
                     <TextBlock Text="VisyaDocs" Style="{StaticResource TitleTextBlockStyle}" />
                     <TextBlock Text="Read, fill, sign, comment and convert PDFs. Scanned pages become searchable with the OCR built into Windows."
                                Opacity="0.7" TextWrapping="Wrap" />

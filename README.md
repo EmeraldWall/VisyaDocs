@@ -60,7 +60,7 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 - Settings is a page inside the app (Menu > Settings), every change applies at once
 - Icons are vector (SVG) and render sharp at any display scale. There are two icon sets tuned for contrast: a deeper one for the Light theme and a brighter one for Dark and Black, so icons stay readable on every background
 - Color icons in Microsoft's Fluent style (see Third party notices)
-- Custom app icon and .pdf file icon (sources in `assets/icon`)
+- App logo and .pdf file icon (the logo master is `assets/icon/visyadocs.png`)
 - One window: opening another PDF from Explorer adds a tab to the running window
 - Settings > "Open PDFs with VisyaDocs" registers the app for .pdf files (current user, no admin) and opens Windows Default apps so you can pick it
 - Tool buttons have accessible names for screen readers
@@ -114,7 +114,7 @@ Toolbar icons: `python build/export_ui_icons.py` (standard library only). It wri
 
 App icon:
 
-Edit the SVGs in `assets/icon`, then:
+Replace `assets/icon/visyadocs.png` (a large square-ish PNG with a transparent background), then:
 
 ```bash
 pip install cairosvg pillow
