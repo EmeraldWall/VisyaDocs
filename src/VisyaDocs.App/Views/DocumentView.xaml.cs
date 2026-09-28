@@ -50,6 +50,9 @@ public sealed partial class DocumentView : UserControl, IDisposable
         CommentsList.ItemsSource = _comments;
         Scroller.AddHandler(PointerWheelChangedEvent, new PointerEventHandler(Scroller_PointerWheelChanged), true);
         Scroller.AddHandler(KeyDownEvent, new KeyEventHandler(Scroller_KeyDown), true);
+        PagesCanvas.PointerWheelChanged += PagesCanvas_PointerWheelChanged;
+        Scroller.DirectManipulationStarted += Scroller_DirectManipulationStarted;
+        Scroller.DirectManipulationCompleted += Scroller_DirectManipulationCompleted;
         AddMainKeyboardZoomAccelerators();
         BuildColorMenu();
         UpdateUndoRedo();

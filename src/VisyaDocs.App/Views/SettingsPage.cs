@@ -56,13 +56,13 @@ public sealed partial class SettingsPage : UserControl
         var reset = new Button { Content = "Reset position" };
         reset.Click += (_, _) =>
         {
-            _settings.RailSide = RailSide.Left;
-            _settings.RailTop = 0.5;
+            _settings.RailSide = RailSide.Right;
+            _settings.RailTop = 0;
             _settings.RailCollapsed = false;
             _settings.Save();
             SettingsChanged?.Invoke(this, EventArgs.Empty);
         };
-        content.Children.Add(Card("select", "Tool bar", "Drag the tool bar by its handle to either side of the page area.", reset));
+        content.Children.Add(Card("select", "Tool bar", "Drag the tool bar by its handle to either side of the page area. Reset puts it back at the top right, open.", reset));
 
         var association = new StackPanel { Spacing = 6, HorizontalAlignment = HorizontalAlignment.Right };
         var associate = new Button { Content = FileAssociation.IsRegistered ? "Choose in Windows settings" : "Set up" };

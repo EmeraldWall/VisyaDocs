@@ -82,7 +82,20 @@ public sealed partial class PageView : Grid
 
     public void ClearBitmap() => SetBitmap(null, 0);
 
-    public void SetCursor(InputSystemCursorShape shape) => ProtectedCursor = InputSystemCursor.Create(shape);
+    private InputSystemCursorShape? _cursorShape;
+    private static readonly Dictionary<InputSystemCursorShape, InputSystemCursor> s_cursors = [];
+
+    /// <summary>
+    /// Sets the pointer shape over this page. Only an actual change is applied: re-setting the cursor
+    /// on every pointer move made it blink.
+    /// </summary>
+    public void SetCursor(InputSystemCursorShape shape)
+    {
+        if (_cursorShape == shape) return;
+        _cursorShape = shape;
+        if (!s_cursors.TryGetValue(shape, out var cursor)) s_cursors[shape] = cursor = InputSystemCursor.Create(shape);
+        ProtectedCursor = cursor;
+    }
 
     /// <summary>Content version the comment hotspots were built for.</summary>
     public int HotspotVersion { get; set; } = -1;

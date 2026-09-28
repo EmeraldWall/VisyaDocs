@@ -55,13 +55,16 @@ public sealed class AppSettings
     public bool RailCollapsed { get; set; }
 
     /// <summary>Side of the page area the tool rail is docked to.</summary>
-    public RailSide RailSide { get; set; } = RailSide.Left;
+    public RailSide RailSide { get; set; } = RailSide.Right;
 
     /// <summary>Vertical position of the tool rail as a fraction of the free space (0 top, 0.5 centered).</summary>
-    public double RailTop { get; set; } = 0.5;
+    public double RailTop { get; set; }
 
     /// <summary>Last page read per file (most recent first), restored when the file is opened again.</summary>
     public List<FilePosition> Positions { get; set; } = [];
+
+    /// <summary>Version of the tool bar defaults last applied (see <see cref="Upgrade"/>).</summary>
+    public int ToolBarDefaults { get; set; }
 
     /// <summary>Whether the one-time welcome tip has been shown.</summary>
     public bool TipShown { get; set; }
@@ -106,15 +109,32 @@ public sealed class AppSettings
 
     private static AppSettings Load()
     {
+        AppSettings? settings = null;
         try
         {
             if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize(File.ReadAllText(FilePath), SettingsJsonContext.Default.AppSettings) ?? new();
+                settings = JsonSerializer.Deserialize(File.ReadAllText(FilePath), SettingsJsonContext.Default.AppSettings);
         }
         catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException)
         {
         }
-        return new AppSettings();
+        settings ??= new AppSettings();
+        settings.Upgrade();
+        return settings;
+    }
+
+    /// <summary>
+    /// Moves existing installs to new defaults once: the tool bar now starts open at the top of the
+    /// right side. After that the user's own placement is kept.
+    /// </summary>
+    private void Upgrade()
+    {
+        if (ToolBarDefaults >= 1) return;
+        RailSide = RailSide.Right;
+        RailTop = 0;
+        RailCollapsed = false;
+        ToolBarDefaults = 1;
+        Save();
     }
 }
 

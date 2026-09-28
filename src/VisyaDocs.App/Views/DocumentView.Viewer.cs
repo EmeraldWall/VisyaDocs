@@ -147,7 +147,8 @@ public sealed partial class DocumentView
             y += rowHeight + PageSpacing;
         }
         PagesCanvas.Width = canvasWidth;
-        PagesCanvas.Height = contentHeight;
+        // At least the viewport height, so Ctrl+wheel and pinch below a short document still reach the canvas.
+        PagesCanvas.Height = Math.Max(contentHeight, Scroller.ViewportHeight);
     }
 
     private void Layout_Click(object sender, RoutedEventArgs e)
@@ -344,6 +345,59 @@ public sealed partial class DocumentView
         ApplyZoom(zoom, kind, anchor);
     }
 
+    // Pinch and Ctrl+wheel -----------------------------------------------------------------------
+
+    private bool _manipulating, _wheelZooming;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _wheelZoomTimer;
+
+    private void Scroller_DirectManipulationStarted(object? sender, object e) => _manipulating = true;
+
+    /// <summary>A touch or touchpad pinch has ended (including its inertia): render the pages sharp at the new size.</summary>
+    private void Scroller_DirectManipulationCompleted(object? sender, object e)
+    {
+        _manipulating = false;
+        if (!_wheelZooming && Math.Abs(Scroller.ZoomFactor - 1) > 0.005) FoldZoomFactor();
+    }
+
+    /// <summary>
+    /// Ctrl+wheel, which is also how many touchpads report a pinch. The built-in zoom takes a full step
+    /// for every event, and a touchpad sends dozens of tiny ones per pinch, so a small pinch zoomed far
+    /// too much. Here the zoom follows the actual amount scrolled (one mouse wheel notch is about 15%),
+    /// is centered on the pointer, and the pages are rendered sharp shortly after the pinch stops.
+    /// </summary>
+    private void PagesCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        if (!e.KeyModifiers.HasFlag(VirtualKeyModifiers.Control) || _pages.Count == 0) return;
+        var point = e.GetCurrentPoint(Scroller);
+        if (point.Properties.IsHorizontalMouseWheel) return;
+        e.Handled = true;
+
+        float current = Scroller.ZoomFactor;
+        double factor = Math.Pow(2, point.Properties.MouseWheelDelta / 600.0);
+        float target = (float)Math.Clamp(current * factor, Scroller.MinZoomFactor, Scroller.MaxZoomFactor);
+        if (Math.Abs(target - current) < 0.0005) return;
+        double x = (Scroller.HorizontalOffset + point.Position.X) / current;
+        double y = (Scroller.VerticalOffset + point.Position.Y) / current;
+        _wheelZooming = true;
+        Scroller.ChangeView(Math.Max(0, x * target - point.Position.X), Math.Max(0, y * target - point.Position.Y), target, true);
+        ZoomText.Text = $"{_zoom * target * 100:0}%";
+        ShowStatusPill();
+
+        if (_wheelZoomTimer is null)
+        {
+            _wheelZoomTimer = _dispatcher.CreateTimer();
+            _wheelZoomTimer.Interval = TimeSpan.FromMilliseconds(220);
+            _wheelZoomTimer.IsRepeating = false;
+            _wheelZoomTimer.Tick += (_, _) =>
+            {
+                _wheelZooming = false;
+                if (!_manipulating && !_disposed && Math.Abs(Scroller.ZoomFactor - 1) > 0.005) FoldZoomFactor();
+            };
+        }
+        _wheelZoomTimer.Stop();
+        _wheelZoomTimer.Start();
+    }
+
     private void ZoomIn_Click(object sender, RoutedEventArgs e) => StepZoom(+1);
 
     private void ZoomOut_Click(object sender, RoutedEventArgs e) => StepZoom(-1);
@@ -374,7 +428,9 @@ public sealed partial class DocumentView
 
     private void Scroller_ViewChanged(object? sender, ScrollViewerViewChangedEventArgs e)
     {
-        if (!e.IsIntermediate && Math.Abs(Scroller.ZoomFactor - 1) > 0.005)
+        // Sharp re-render only once a pinch or wheel zoom is over, never in the middle of it: folding
+        // mid-gesture made the rest of the gesture apply on top of the new size (far too much zoom).
+        if (!e.IsIntermediate && !_manipulating && !_wheelZooming && Math.Abs(Scroller.ZoomFactor - 1) > 0.005)
         {
             FoldZoomFactor();
             return;
