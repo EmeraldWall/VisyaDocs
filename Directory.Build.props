@@ -4,9 +4,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Company>VisyaDocs</Company>
-    <Product>VisyaDocs</Product>
-    <Version>0.1.0</Version>
+    <Company>VisaryPDF</Company>
+    <Product>VisaryPDF</Product>
+    <Version>1.0.0</Version>
     <!-- Pinned PDFium build from https://github.com/bblanchon/pdfium-binaries -->
     <PdfiumRelease>chromium/8066</PdfiumRelease>
   </PropertyGroup>

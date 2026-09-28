@@ -3,7 +3,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
-      VisyaDocs colors. Light is a soft grey (never stark white) to reduce eye strain.
+      VisaryPDF colors. Light is a soft grey (never stark white) to reduce eye strain.
       Dark is the Windows style dark grey. The Black theme (PaletteBlack.xaml) overrides Dark
       with pure black when selected.
       Besides our own Visya* brushes, common WinUI brushes are overridden so built-in

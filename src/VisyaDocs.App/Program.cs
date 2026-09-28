@@ -6,12 +6,12 @@ using Microsoft.Windows.AppLifecycle;
 namespace VisyaDocs.App;
 
 /// <summary>
-/// Entry point. VisyaDocs runs as a single instance: opening another PDF (double click in Explorer,
+/// Entry point. VisaryPDF runs as a single instance: opening another PDF (double click in Explorer,
 /// "Open with") hands the file to the window that is already open, which shows it in a new tab.
 /// </summary>
 public static partial class Program
 {
-    private const string InstanceKey = "VisyaDocs.Main";
+    private const string InstanceKey = "VisaryPDF.Main";
 
     [STAThread]
     private static int Main(string[] args)

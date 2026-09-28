@@ -54,7 +54,7 @@ public sealed partial class DocumentView
         {
             var confirm = Dialogs.Create(XamlRoot, "Remove the restrictions?", new TextBlock
             {
-                Text = "The author of this PDF limited printing, copying or changes. VisyaDocs can save a copy without these "
+                Text = "The author of this PDF limited printing, copying or changes. VisaryPDF can save a copy without these "
                     + "restrictions and without a password. Only do this for documents you have the right to use this way.",
                 TextWrapping = TextWrapping.Wrap,
             }, "Save unrestricted copy");
@@ -112,7 +112,7 @@ public sealed partial class DocumentView
         if (link.Uri is not { } address || !Uri.TryCreate(address, UriKind.Absolute, out var uri)) return;
         if (uri.Scheme is not ("http" or "https" or "mailto"))
         {
-            ShowMessage("Link not opened", $"VisyaDocs only opens web and e-mail links. This one is: {address}", InfoBarSeverity.Warning);
+            ShowMessage("Link not opened", $"VisaryPDF only opens web and e-mail links. This one is: {address}", InfoBarSeverity.Warning);
             return;
         }
         var text = new TextBlock { Text = uri.ToString(), TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
