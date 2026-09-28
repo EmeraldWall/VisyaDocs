@@ -1,8 +1,8 @@
-# VisyaDocs
+# VisaryPDF
 
 A modern, lightweight PDF reader, editor and converter for Windows, built with WinUI 3. Scanned PDFs can be turned into searchable, copyable text with the OCR engine that is already part of Windows.
 
-![VisyaDocs icon](src/VisyaDocs.App/Assets/Square44x44Logo.targetsize-256_altform-unplated.png)
+![VisaryPDF icon](src/VisyaDocs.App/Assets/Square44x44Logo.targetsize-256_altform-unplated.png)
 
 ## Features
 
@@ -28,7 +28,7 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 
 **Password protected and restricted PDFs**
 - Opening asks for the password. Saving keeps the protection
-- Menu > "Remove password and restrictions" saves a copy without encryption: no password and no limits on printing, copying or changes. The copy opens in a new tab and the original file is not changed. For files whose author restricted them, VisyaDocs asks first and reminds you to do this only for documents you have the right to use that way (the same thing `qpdf --decrypt` does)
+- Menu > "Remove password and restrictions" saves a copy without encryption: no password and no limits on printing, copying or changes. The copy opens in a new tab and the original file is not changed. For files whose author restricted them, VisaryPDF asks first and reminds you to do this only for documents you have the right to use that way (the same thing `qpdf --decrypt` does)
 - Printing a PDF whose author disallowed printing asks for confirmation, then prints normally
 - Adding a password is not possible: PDFium, the PDF engine, can read encryption but cannot write it
 
@@ -62,7 +62,7 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 - Color icons in Microsoft's Fluent style (see Third party notices)
 - App logo and .pdf file icon (the logo master is `assets/icon/visyadocs.png`)
 - One window: opening another PDF from Explorer adds a tab to the running window
-- Settings > "Open PDFs with VisyaDocs" registers the app for .pdf files (current user, no admin) and opens Windows Default apps so you can pick it
+- Settings > "Open PDFs with VisaryPDF" registers the app for .pdf files (current user, no admin) and opens Windows Default apps so you can pick it
 - Tool buttons have accessible names for screen readers
 
 ## Why it is light
@@ -76,7 +76,7 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 | Word export | A small OOXML writer, no Office SDK |
 | Runtime | .NET 10, Native AOT, trimmed, self contained: no .NET install needed |
 
-Measured on CI (x64, Native AOT, no debug symbols): the app folder is about 67 MB (29 MB zipped). About 45 MB of that is the bundled WinUI runtime, which is what lets the app run from a folder with nothing to install; VisyaDocs itself is about 8 MB and PDFium about 7 MB. The CI job prints the size in its summary.
+Measured on CI (x64, Native AOT, no debug symbols): the app folder is about 67 MB (29 MB zipped). About 45 MB of that is the bundled WinUI runtime, which is what lets the app run from a folder with nothing to install; VisaryPDF itself is about 8 MB and PDFium about 7 MB. The CI job prints the size in its summary.
 
 ### Memory
 
@@ -96,15 +96,13 @@ Needs the .NET 10 SDK. Visual Studio 2022/2026 with the "Windows application dev
 dotnet test tests/VisyaDocs.Core.Tests
 dotnet test tests/VisyaDocs.Platform.Tests
 
-# Build and run the app
-dotnet build src/VisyaDocs.App -p:Platform=x64
-.\src\VisyaDocs.App\bin\x64\Debug\net10.0-windows10.0.19041.0\win-x64\VisyaDocs.exe
-
-# Publish a self contained Native AOT build to artifacts\VisyaDocs-win-x64
+# Publish a self contained Native AOT build to artifacts\VisaryPDF-win-x64
 dotnet publish src/VisyaDocs.App -c Release -p:Platform=x64 -p:PublishProfile=win-x64
 ```
 
-Use `ARM64` / `win-ARM64` for ARM devices. An MSIX package (with the .pdf file association and icon) can be produced with `-p:WindowsPackageType=MSIX`.
+Use `ARM64` / `win-ARM64` for ARM devices.
+
+In Visual Studio the app project is packaged (MSIX): F5 or Build > Deploy installs it on your PC like a normal app (Start menu entry, .pdf association). Installing a local copy, taking Store screenshots and publishing to the Microsoft Store are described step by step in [docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 The core library (`VisyaDocs.Core`) has no Windows dependencies, so its tests also run on Linux and macOS.
 

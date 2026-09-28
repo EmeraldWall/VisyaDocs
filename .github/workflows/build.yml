@@ -52,7 +52,7 @@ jobs:
         shell: pwsh
         run: |
           $rid = if ('${{ matrix.platform }}' -eq 'x64') { 'win-x64' } else { 'win-arm64' }
-          $dir = "artifacts/VisyaDocs-$rid"
+          $dir = "artifacts/VisaryPDF-$rid"
           $files = Get-ChildItem $dir -Recurse -File
           $mb = [math]::Round((($files | Measure-Object Length -Sum).Sum) / 1MB, 1)
           "Published folder: $mb MB in $($files.Count) files" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
@@ -66,7 +66,7 @@ jobs:
           python -m pip install --quiet reportlab
           python build/make_sample_pdf.py "$PWD/sample.pdf" 80
           $env:VISYADOCS_MEMTEST = "$PWD/memory.txt"
-          $app = Start-Process artifacts/VisyaDocs-win-x64/VisyaDocs.exe -ArgumentList "`"$PWD/sample.pdf`"" -PassThru
+          $app = Start-Process artifacts/VisaryPDF-win-x64/VisaryPDF.exe -ArgumentList "`"$PWD/sample.pdf`"" -PassThru
           if (-not $app.WaitForExit(240000)) { $app.Kill(); "Memory check timed out" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append }
           if (Test-Path memory.txt) {
             "Memory check (80 page PDF):" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
@@ -75,6 +75,63 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: VisyaDocs-${{ matrix.platform }}
-          path: artifacts/VisyaDocs-win-*/
+          name: VisaryPDF-${{ matrix.platform }}
+          path: artifacts/VisaryPDF-win-*/
+          if-no-files-found: error
+
+  msix:
+    # Builds the same MSIX that Visual Studio's "Create App Packages" makes, signs it with a throwaway
+    # test certificate, installs it on the runner and starts it.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test certificate (subject matches the manifest publisher)
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=VisaryPDF" -KeyUsage DigitalSignature `
+            -FriendlyName "VisaryPDF test" -CertStoreLocation "Cert:\CurrentUser\My" `
+            -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+          $password = ConvertTo-SecureString -String "ci-test" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath "$PWD/test.pfx" -Password $password | Out-Null
+          Export-Certificate -Cert $cert -FilePath "$PWD/VisaryPDF-test.cer" | Out-Null
+
+      - name: Build MSIX (x64, Native AOT)
+        shell: pwsh
+        run: |
+          dotnet publish src/VisyaDocs.App -c Release -p:Platform=x64 -p:PublishProfile=msix-x64 `
+            -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=true `
+            -p:PackageCertificateKeyFile="$PWD/test.pfx" -p:PackageCertificatePassword=ci-test `
+            -p:AppxPackageDir="$PWD/packages/"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $msix = Get-ChildItem packages -Recurse -Include *.msix | Select-Object -First 1
+          if (-not $msix) { Write-Error "No .msix was produced"; exit 1 }
+          "MSIX: $($msix.Name), $([math]::Round($msix.Length / 1MB, 1)) MB" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "MSIX_PATH=$($msix.FullName)" >> $env:GITHUB_ENV
+
+      - name: Install and start the package
+        shell: pwsh
+        run: |
+          Import-Certificate -FilePath VisaryPDF-test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+          Add-AppxPackage -Path $env:MSIX_PATH
+          $package = Get-AppxPackage -Name VisaryPDF
+          "Installed $($package.PackageFullName)" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          Start-Process "shell:AppsFolder\$($package.PackageFamilyName)!App"
+          Start-Sleep -Seconds 10
+          $running = Get-Process -Name VisaryPDF -ErrorAction SilentlyContinue
+          if (-not $running) { Write-Error "The installed app did not start"; exit 1 }
+          "Started: working set $([math]::Round($running[0].WorkingSet64 / 1MB)) MB" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          $running | Stop-Process -Force
+          Remove-AppxPackage -Package $package.PackageFullName
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VisaryPDF-x64-msix-test
+          path: |
+            packages/**/*.msix
+            VisaryPDF-test.cer
           if-no-files-found: error

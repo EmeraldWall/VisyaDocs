@@ -267,7 +267,7 @@
                         <Button Content="Remove restrictions" Click="RemoveRestrictions_Click" />
                     </InfoBar.ActionButton>
                 </InfoBar>
-            <InfoBar x:Name="TipBar" Severity="Informational" IsOpen="False" Title="Welcome to VisyaDocs"
+            <InfoBar x:Name="TipBar" Severity="Informational" IsOpen="False" Title="Welcome to VisaryPDF"
                      Message="Reading and editing tools are on the tool bar at the side; drag its dots to move it. Menu at the top left has open, save, print, convert and settings. Press Alt to see key letters for every button, and F1 for keyboard shortcuts." />
             <InfoBar x:Name="FormBar" Severity="Informational" IsOpen="False" Title="This document has a form"
                          Message="Click a field to fill it in. Save to keep your entries." />

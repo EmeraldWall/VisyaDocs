@@ -1,7 +1,7 @@
 {
   "profiles": {
-    "VisyaDocs": {
-      "commandName": "Project"
+    "VisaryPDF (Package)": {
+      "commandName": "MsixPackage"
     }
   }
 }

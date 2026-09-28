@@ -5,18 +5,23 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <RootNamespace>VisyaDocs.App</RootNamespace>
-    <AssemblyName>VisyaDocs</AssemblyName>
+    <AssemblyName>VisaryPDF</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>Assets\VisyaDocs.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\VisaryPDF.ico</ApplicationIcon>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' And '$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
-    <PublishProfile>win-$(Platform).pubxml</PublishProfile>
+    <!-- Default profile (also read on every build): the MSIX one. The folder build passes PublishProfile=win-x64 or win-ARM64. -->
+    <PublishProfile Condition="'$(PublishProfile)' == ''">msix-$(Platform).pubxml</PublishProfile>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
-    <!-- Unpackaged, self contained: runs from a folder with nothing to install. -->
-    <WindowsPackageType>None</WindowsPackageType>
+    <!--
+      Packaged (MSIX) by default: Visual Studio deploys it like an installed app (F5, Deploy) and
+      "Package and Publish > Create App Packages" builds sideload and Microsoft Store packages.
+      The folder build (publish profiles win-x64 / win-ARM64) sets WindowsPackageType=None and runs
+      from a plain folder with nothing to install.
+    -->
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>

@@ -39,7 +39,7 @@ public sealed partial class MainWindow : Window
         // which gives the standard behavior: drag, double-click to maximize or restore, right-click menu.
         ExtendsContentIntoTitleBar = true;
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Standard;
-        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "VisyaDocs.ico"));
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "VisaryPDF.ico"));
         AppWindow.Resize(new SizeInt32(1320, 900));
         AppWindow.Closing += AppWindow_Closing;
 
@@ -330,7 +330,7 @@ public sealed partial class MainWindow : Window
     private void UpdateWindowTitle()
     {
         string? title = _active?.View.Title;
-        Title = title is null ? "VisyaDocs" : $"{title} - VisyaDocs";
+        Title = title is null ? AppInfo.Name : $"{title} - {AppInfo.Name}";
     }
 
     /// <summary>
@@ -636,7 +636,7 @@ public sealed partial class MainWindow : Window
         if (e.DataView.Contains(StandardDataFormats.StorageItems))
         {
             e.AcceptedOperation = DataPackageOperation.Copy;
-            e.DragUIOverride.Caption = "Open with VisyaDocs";
+            e.DragUIOverride.Caption = $"Open with {AppInfo.Name}";
         }
     }
 

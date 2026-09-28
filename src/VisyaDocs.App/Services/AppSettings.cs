@@ -25,13 +25,15 @@ public enum RailSide
     Right,
 }
 
-/// <summary>User preferences, stored as JSON in %LocalAppData%\VisyaDocs\settings.json.</summary>
+/// <summary>User preferences, stored as JSON in %LocalAppData%\VisaryPDF\settings.json.</summary>
 public sealed class AppSettings
 {
     private const int MaxRecent = 10;
 
-    private static readonly string FilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VisyaDocs", "settings.json");
+    private static readonly string Folder = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppInfo.Name);
+
+    private static readonly string FilePath = Path.Combine(Folder, "settings.json");
 
     public static AppSettings Current { get; } = Load();
 
@@ -80,8 +82,7 @@ public sealed class AppSettings
         Save();
     }
 
-    public static string SignaturesFolder { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VisyaDocs", "signatures");
+    public static string SignaturesFolder { get; } = Path.Combine(Folder, "signatures");
 
     public void AddRecent(string path)
     {
@@ -109,6 +110,7 @@ public sealed class AppSettings
 
     private static AppSettings Load()
     {
+        MoveFromOldName();
         AppSettings? settings = null;
         try
         {
@@ -121,6 +123,25 @@ public sealed class AppSettings
         settings ??= new AppSettings();
         settings.Upgrade();
         return settings;
+    }
+
+    /// <summary>The app was called VisyaDocs before; its settings and saved signatures carry over once.</summary>
+    private static void MoveFromOldName()
+    {
+        try
+        {
+            string old = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VisyaDocs");
+            if (Directory.Exists(Folder) || !Directory.Exists(old)) return;
+            foreach (var file in Directory.GetFiles(old, "*", SearchOption.AllDirectories))
+            {
+                string target = Path.Combine(Folder, Path.GetRelativePath(old, file));
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                File.Copy(file, target, overwrite: false);
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     /// <summary>

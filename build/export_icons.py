@@ -3,11 +3,11 @@
 Usage: python build/export_icons.py   (needs: pip install cairosvg pillow)
 
 Sources:
-  assets/icon/visyadocs.png   the logo (large, transparent background); every size is scaled from it
+  assets/icon/visarypdf.png   the logo (large, transparent background); every size is scaled from it
   assets/icon/pdf-badge.svg   the "PDF" tag added for the .pdf file icon
 
 Writes into src/VisyaDocs.App/Assets:
-  VisyaDocs.ico       EXE, window and taskbar icon (16 to 256 px)
+  VisaryPDF.ico       EXE, window and taskbar icon (16 to 256 px)
   PdfFile.ico         icon for .pdf files associated with the app
   AppLogo.png         in-app logo (home screen), AppLogoSmall.png (title bar)
   *.png               MSIX logo set (tiles, store logo, splash screen, target sizes)
@@ -26,7 +26,7 @@ OUT = ROOT / "src" / "VisyaDocs.App" / "Assets"
 
 def master() -> Image.Image:
     """The logo cropped to its content and centered on a square transparent canvas."""
-    logo = Image.open(SRC / "visyadocs.png").convert("RGBA")
+    logo = Image.open(SRC / "visarypdf.png").convert("RGBA")
     logo = logo.crop(logo.getchannel("A").getbbox())
     side = max(logo.size)
     square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
@@ -82,7 +82,7 @@ def write_png(name: str, width: int, height: int, logo: int, pdf: bool = False) 
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    write_ico(OUT / "VisyaDocs.ico")
+    write_ico(OUT / "VisaryPDF.ico")
     write_ico(OUT / "PdfFile.ico", pdf=True, sizes=(16, 24, 32, 48, 64, 256))
 
     # MSIX visual assets (scale-200 plus unplated target sizes for the taskbar and Start).

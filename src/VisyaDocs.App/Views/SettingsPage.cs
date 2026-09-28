@@ -65,14 +65,15 @@ public sealed partial class SettingsPage : UserControl
         content.Children.Add(Card("select", "Tool bar", "Drag the tool bar by its handle to either side of the page area. Reset puts it back at the top right, open.", reset));
 
         var association = new StackPanel { Spacing = 6, HorizontalAlignment = HorizontalAlignment.Right };
-        var associate = new Button { Content = FileAssociation.IsRegistered ? "Choose in Windows settings" : "Set up" };
+        var associate = new Button { Content = AppInfo.IsPackaged || FileAssociation.IsRegistered ? "Choose in Windows settings" : "Set up" };
         var status = new TextBlock { Opacity = 0.7, FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxWidth = 260 };
         associate.Click += async (_, _) =>
         {
             try
             {
-                FileAssociation.Register();
-                status.Text = "In the window that opens, choose VisyaDocs for .pdf.";
+                // An installed package already offers itself for .pdf through its manifest.
+                if (!AppInfo.IsPackaged) FileAssociation.Register();
+                status.Text = $"In the window that opens, choose {AppInfo.Name} for .pdf.";
                 associate.Content = "Choose in Windows settings";
                 await FileAssociation.OpenDefaultAppsSettingsAsync();
             }
@@ -83,8 +84,8 @@ public sealed partial class SettingsPage : UserControl
         };
         association.Children.Add(associate);
         association.Children.Add(status);
-        content.Children.Add(Card("pdf", "Open PDFs with VisyaDocs",
-            "Makes VisyaDocs available for PDF files in Windows. Windows then asks you to confirm it as the default app.", association));
+        content.Children.Add(Card("pdf", $"Open PDFs with {AppInfo.Name}",
+            $"Makes {AppInfo.Name} available for PDF files in Windows. Windows then asks you to confirm it as the default app.", association));
 
         content.Children.Add(Section("Text recognition"));
         var languages = OcrService.AvailableLanguages;
@@ -119,7 +120,7 @@ public sealed partial class SettingsPage : UserControl
 
         content.Children.Add(Section("About"));
         var version = typeof(SettingsPage).Assembly.GetName().Version?.ToString(3) ?? "";
-        content.Children.Add(Card("properties", $"VisyaDocs {version}",
+        content.Children.Add(Card("properties", $"{AppInfo.Name} {version}",
             "PDF engine: PDFium (BSD/Apache 2.0). Text recognition: Windows OCR. Icons: Microsoft Fluent UI System Icons (MIT).", null));
 
         Content = new ScrollViewer { Content = content };
