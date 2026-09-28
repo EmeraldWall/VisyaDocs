@@ -2,7 +2,7 @@
 
 A modern, lightweight PDF reader, editor and converter for Windows, built with WinUI 3. Scanned PDFs can be turned into searchable, copyable text with the OCR engine that is already part of Windows.
 
-![VisaryPDF icon](src/VisyaDocs.App/Assets/Square44x44Logo.targetsize-256_altform-unplated.png)
+![VisaryPDF icon](src/VisaryPDF.App/Assets/Square44x44Logo.targetsize-256_altform-unplated.png)
 
 ## Features
 
@@ -60,7 +60,7 @@ A modern, lightweight PDF reader, editor and converter for Windows, built with W
 - Settings is a page inside the app (Menu > Settings), every change applies at once
 - Icons are vector (SVG) and render sharp at any display scale. There are two icon sets tuned for contrast: a deeper one for the Light theme and a brighter one for Dark and Black, so icons stay readable on every background
 - Color icons in Microsoft's Fluent style (see Third party notices)
-- App logo and .pdf file icon (the logo master is `assets/icon/visyadocs.png`)
+- App logo and .pdf file icon (the logo master is `assets/icon/visarypdf.png`)
 - One window: opening another PDF from Explorer adds a tab to the running window
 - Settings > "Open PDFs with VisaryPDF" registers the app for .pdf files (current user, no admin) and opens Windows Default apps so you can pick it
 - Tool buttons have accessible names for screen readers
@@ -93,18 +93,18 @@ Needs the .NET 10 SDK. Visual Studio 2022/2026 with the "Windows application dev
 
 ```powershell
 # Run tests (the PDFium binary for your machine is downloaded automatically on first build)
-dotnet test tests/VisyaDocs.Core.Tests
-dotnet test tests/VisyaDocs.Platform.Tests
+dotnet test tests/VisaryPDF.Core.Tests
+dotnet test tests/VisaryPDF.Platform.Tests
 
 # Publish a self contained Native AOT build to artifacts\VisaryPDF-win-x64
-dotnet publish src/VisyaDocs.App -c Release -p:Platform=x64 -p:PublishProfile=win-x64
+dotnet publish src/VisaryPDF.App -c Release -p:Platform=x64 -p:PublishProfile=win-x64
 ```
 
 Use `ARM64` / `win-ARM64` for ARM devices.
 
 In Visual Studio the app project is packaged (MSIX): F5 or Build > Deploy installs it on your PC like a normal app (Start menu entry, .pdf association). Installing a local copy, taking Store screenshots and publishing to the Microsoft Store are described step by step in [docs/PUBLISHING.md](docs/PUBLISHING.md).
 
-The core library (`VisyaDocs.Core`) has no Windows dependencies, so its tests also run on Linux and macOS.
+The core library (`VisaryPDF.Core`) has no Windows dependencies, so its tests also run on Linux and macOS.
 
 ### Regenerating icons
 
@@ -112,7 +112,7 @@ Toolbar icons: `python build/export_ui_icons.py` (standard library only). It wri
 
 App icon:
 
-Replace `assets/icon/visyadocs.png` (a large square-ish PNG with a transparent background), then:
+Replace `assets/icon/visarypdf.png` (a large square-ish PNG with a transparent background), then:
 
 ```bash
 pip install cairosvg pillow
@@ -122,9 +122,9 @@ python build/export_icons.py
 ## Project layout
 
 ```
-src/VisyaDocs.Core      PDFium interop, document model, editing, export (PNG, DOCX, TXT)
-src/VisyaDocs.Platform  Windows OCR and image codecs
-src/VisyaDocs.App       WinUI 3 app: shell, viewer, tools, themes, icons
+src/VisaryPDF.Core      PDFium interop, document model, editing, export (PNG, DOCX, TXT)
+src/VisaryPDF.Platform  Windows OCR and image codecs
+src/VisaryPDF.App       WinUI 3 app: shell, viewer, tools, themes, icons
 tests/                  xUnit tests for Core (cross platform) and Platform (Windows)
 build/                  PDFium download targets, icon export script
 ```

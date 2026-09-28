@@ -24,10 +24,10 @@ jobs:
           Get-WindowsCapability -Online | Where-Object Name -like 'Language.OCR*' | Format-Table Name, State
 
       - name: Core tests
-        run: dotnet test tests/VisyaDocs.Core.Tests -c Release --logger "console;verbosity=normal"
+        run: dotnet test tests/VisaryPDF.Core.Tests -c Release --logger "console;verbosity=normal"
 
       - name: Windows platform tests (OCR, imaging)
-        run: dotnet test tests/VisyaDocs.Platform.Tests -c Release --logger "console;verbosity=normal"
+        run: dotnet test tests/VisaryPDF.Platform.Tests -c Release --logger "console;verbosity=normal"
 
   app:
     runs-on: windows-latest
@@ -43,10 +43,10 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Build (Debug)
-        run: dotnet build src/VisyaDocs.App -c Debug -p:Platform=${{ matrix.platform }}
+        run: dotnet build src/VisaryPDF.App -c Debug -p:Platform=${{ matrix.platform }}
 
       - name: Publish (Release, Native AOT, self contained)
-        run: dotnet publish src/VisyaDocs.App -c Release -p:Platform=${{ matrix.platform }} -p:PublishProfile=win-${{ matrix.platform }}
+        run: dotnet publish src/VisaryPDF.App -c Release -p:Platform=${{ matrix.platform }} -p:PublishProfile=win-${{ matrix.platform }}
 
       - name: Report size
         shell: pwsh
@@ -65,7 +65,7 @@ jobs:
         run: |
           python -m pip install --quiet reportlab
           python build/make_sample_pdf.py "$PWD/sample.pdf" 80
-          $env:VISYADOCS_MEMTEST = "$PWD/memory.txt"
+          $env:VISARYPDF_MEMTEST = "$PWD/memory.txt"
           $app = Start-Process artifacts/VisaryPDF-win-x64/VisaryPDF.exe -ArgumentList "`"$PWD/sample.pdf`"" -PassThru
           if (-not $app.WaitForExit(240000)) { $app.Kill(); "Memory check timed out" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append }
           if (Test-Path memory.txt) {
@@ -103,7 +103,7 @@ jobs:
       - name: Build MSIX (x64, Native AOT)
         shell: pwsh
         run: |
-          dotnet publish src/VisyaDocs.App -c Release -p:Platform=x64 -p:PublishProfile=msix-x64 `
+          dotnet publish src/VisaryPDF.App -c Release -p:Platform=x64 -p:PublishProfile=msix-x64 `
             -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=true `
             -p:PackageCertificateKeyFile="$PWD/test.pfx" -p:PackageCertificatePassword=ci-test `
             -p:AppxPackageDir="$PWD/packages/"

@@ -23,8 +23,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 VENDOR = ROOT / "assets" / "ui-icons" / "fluent"
-OUT = ROOT / "src" / "VisyaDocs.App" / "Assets" / "Icons"
-XAML = ROOT / "src" / "VisyaDocs.App" / "Themes" / "Icons.xaml"
+OUT = ROOT / "src" / "VisaryPDF.App" / "Assets" / "Icons"
+XAML = ROOT / "src" / "VisaryPDF.App" / "Themes" / "Icons.xaml"
 
 # Gradient ramps sampled from Microsoft's Fluent color icons (top-left to bottom-right).
 RAMPS = {
