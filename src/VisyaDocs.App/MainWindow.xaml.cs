@@ -53,7 +53,12 @@ public sealed partial class MainWindow : Window
         Root.SizeChanged += (_, _) => UpdateTitleBarRegions();
         // A minimized window gives its page images back.
         VisibilityChanged += (_, e) => _active?.View.SetSuspended(!e.Visible);
-        Root.Loaded += (_, _) => UpdateTitleBarRegions();
+        Root.Loaded += (_, _) =>
+        {
+            UpdateTitleBarRegions();
+            ApplyMinimumSize();
+            Root.XamlRoot.Changed += (_, _) => ApplyMinimumSize();
+        };
         TabStrip.SizeChanged += (_, _) => UpdateTitleBarRegions();
         TabScroller.SizeChanged += (_, _) => UpdateTitleBarRegions();
 
@@ -94,6 +99,22 @@ public sealed partial class MainWindow : Window
         AppTitleBar.Visibility = fullScreen ? Visibility.Collapsed : Visibility.Visible;
         foreach (var tab in _tabs) tab.View.OnFullScreenChanged(fullScreen);
         UpdateTitleBarRegions();
+        ApplyMinimumSize();
+    }
+
+    /// <summary>Smallest window (in DIPs) that still shows the title bar, the tool bar and a readable page.</summary>
+    private const double MinWindowWidth = 640, MinWindowHeight = 480;
+
+    /// <summary>
+    /// Sets the minimum window size. The presenter takes physical pixels (it is not DPI aware), so the
+    /// size is converted with the current display scale and set again when the scale changes.
+    /// </summary>
+    private void ApplyMinimumSize()
+    {
+        if (Root.XamlRoot is null || AppWindow.Presenter is not OverlappedPresenter presenter) return;
+        double scale = Root.XamlRoot.RasterizationScale;
+        presenter.PreferredMinimumWidth = (int)Math.Ceiling(MinWindowWidth * scale);
+        presenter.PreferredMinimumHeight = (int)Math.Ceiling(MinWindowHeight * scale);
     }
 
     /// <summary>Shows a document created elsewhere in the app (for example extracted pages) in a new tab.</summary>
@@ -492,8 +513,8 @@ public sealed partial class MainWindow : Window
     {
         bool hasDocument = _active is not null;
         SaveItem.IsEnabled = SaveAsItem.IsEnabled = PrintItem.IsEnabled = PropertiesItem.IsEnabled = ConvertMenu.IsEnabled = hasDocument;
-        // Only for files opened with their password and full rights (see PdfDocument.CanRemovePassword).
-        RemovePasswordItem.Visibility = _active?.View.CanRemovePassword == true ? Visibility.Visible : Visibility.Collapsed;
+        // For any password protected or restricted file.
+        RemovePasswordItem.Visibility = _active?.View.CanRemoveProtection == true ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private async void Shortcuts_Click(object sender, RoutedEventArgs e) => await ShowShortcutsAsync();

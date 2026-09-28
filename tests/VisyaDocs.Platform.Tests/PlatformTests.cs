@@ -109,4 +109,42 @@ public class PlatformTests(ITestOutputHelper output)
             File.Delete(file);
         }
     }
+
+    [Fact]
+    public void PrintsAPdfWhoseAuthorRestrictedPrinting()
+    {
+        // After the user confirms, the app prints an unrestricted in-memory copy. That copy must
+        // produce the real page. The original is printed too, only to record what PDFium does with it.
+        using var original = PdfDocument.Open(Path.Combine(AppContext.BaseDirectory, "assets", "restricted.pdf"));
+        Assert.False(original.Permissions.CanPrint);
+        using var copy = original.CreateUnprotectedCopy();
+
+        bool? originalHasInk = PrintAndCheck(original);
+        if (originalHasInk is null) return;
+        output.WriteLine($"Original printed with content: {originalHasInk}");
+        Assert.True(PrintAndCheck(copy), "The unrestricted copy must print the page content.");
+    }
+
+    /// <summary>Prints page 1 to Microsoft Print to PDF; true when the sheet has content, null when the printer is missing.</summary>
+    private bool? PrintAndCheck(PdfDocument doc)
+    {
+        string file = Path.Combine(Path.GetTempPath(), $"visya-print-check-{Guid.NewGuid():N}.pdf");
+        try
+        {
+            if (!PrintService.PrintToPrinter(doc, "Microsoft Print to PDF", [0], "VisyaDocs test", file))
+            {
+                output.WriteLine("\"Microsoft Print to PDF\" is not installed on this machine; skipping.");
+                return null;
+            }
+            using var printed = PdfDocument.Open(file);
+            var g = printed.GetGeometry(0);
+            // Wide enough that the fixture's 12 point text has solid dark pixels.
+            byte[] pixels = printed.RenderPage(0, 600, (int)(600 * g.ViewHeight / g.ViewWidth));
+            return pixels.Any(b => b < 100);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
 }

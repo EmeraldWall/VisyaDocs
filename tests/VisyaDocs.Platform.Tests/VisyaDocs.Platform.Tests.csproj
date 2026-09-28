@@ -14,5 +14,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\VisyaDocs.Platform\VisyaDocs.Platform.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\VisyaDocs.Core.Tests\assets\restricted.pdf" Link="assets\restricted.pdf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
   <Import Project="..\..\build\Pdfium.targets" />
 </Project>

@@ -489,7 +489,7 @@ public sealed partial class DocumentView
         }
         else
         {
-            SidePane.Visibility = Visibility.Collapsed;
+            CloseSidePane();
         }
     }
 

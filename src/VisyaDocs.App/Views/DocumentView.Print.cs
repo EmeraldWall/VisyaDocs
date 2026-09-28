@@ -19,7 +19,15 @@ public sealed partial class DocumentView
     private async Task PrintAsync()
     {
         if (_pages.Count == 0 || _operation is not null) return;
-        if (!Permitted(_permissions.CanPrint, "printing")) return;
+        if (!_permissions.CanPrint)
+        {
+            var confirm = Services.Dialogs.Create(XamlRoot, "Print anyway?", new TextBlock
+            {
+                Text = "The author of this PDF does not allow printing. Only print it if you have the right to.",
+                TextWrapping = TextWrapping.Wrap,
+            }, "Print");
+            if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
+        }
         CommitEditor();
 
         PrintJob? job;
@@ -36,8 +44,18 @@ public sealed partial class DocumentView
         if (job is null) return;
 
         int sheets = job.Pages.Count * job.Copies;
-        bool ok = await RunOperationAsync($"Printing {sheets} page(s)", (progress, ct) =>
-            PrintService.PrintAsync(_doc, job, _name, progress, ct));
+        bool ok = await RunOperationAsync($"Printing {sheets} page(s)", async (progress, ct) =>
+        {
+            if (_permissions.CanPrint)
+            {
+                await PrintService.PrintAsync(_doc, job, _name, progress, ct);
+                return;
+            }
+            // The author disallowed printing and the user chose to print anyway: print an
+            // unrestricted copy held in memory (nothing is written to disk).
+            using var copy = await Task.Run(_doc.CreateUnprotectedCopy, ct);
+            await PrintService.PrintAsync(copy, job, _name, progress, ct);
+        });
         if (ok) ShowMessage("Printing", $"Sent {sheets} page(s) to {job.PrinterName}.", InfoBarSeverity.Success, autoHide: true);
     }
 }

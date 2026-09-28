@@ -57,6 +57,7 @@ public sealed partial class DocumentView
         OnThemeChanged();
         SetRailCollapsed(_fullScreen || AppSettings.Current.RailCollapsed);
         PositionRail();
+        ArrangeOverlays();
         LayoutPages();
         UpdateVisiblePages();
     }
@@ -87,6 +88,7 @@ public sealed partial class DocumentView
     private void Rail_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         PositionRail();
+        ArrangeOverlays();
         // The footprint changed (expanded or folded): lay the pages out around it again.
         if (_zoomKind == ZoomKind.FitWidth && _pages.Count > 0) SetZoom(FitWidthZoom(), ZoomKind.FitWidth);
         else
@@ -135,6 +137,7 @@ public sealed partial class DocumentView
         settings.Save();
         if (Motion.Enabled) Rail.Transitions = [new RepositionThemeTransition()];
         PositionRail();
+        ArrangeOverlays();
         LayoutPages();
         UpdateVisiblePages();
         e.Handled = true;
