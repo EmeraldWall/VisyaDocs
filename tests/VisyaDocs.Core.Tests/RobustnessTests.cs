@@ -148,6 +148,9 @@ public class RobustnessTests
             Assert.Equal(text, copy.GetPageText(0));
             // The open document keeps its restrictions.
             Assert.False(doc.Permissions.CanPrint);
+            using var inMemory = doc.CreateUnprotectedCopy();
+            Assert.True(inMemory.Permissions.CanPrint);
+            Assert.Equal(text, inMemory.GetPageText(0));
         }
         finally
         {

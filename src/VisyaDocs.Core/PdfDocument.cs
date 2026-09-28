@@ -219,17 +219,28 @@ public sealed unsafe partial class PdfDocument : IDisposable
     public void SaveUnprotectedCopy(string path)
     {
         if (!IsEncrypted) throw new PdfException("This PDF is not password protected or restricted.");
-        byte[] bytes;
+        byte[] bytes = UnprotectedBytes();
+        string temp = path + ".visya-tmp";
+        File.WriteAllBytes(temp, bytes);
+        File.Move(temp, path, overwrite: true);
+    }
+
+    /// <summary>
+    /// An in-memory copy without encryption and restrictions. Used to print a PDF whose author
+    /// disallowed printing (PDFium draws blank pages for such files when printing), after the
+    /// user confirmed.
+    /// </summary>
+    public PdfDocument CreateUnprotectedCopy() => Load(UnprotectedBytes());
+
+    private byte[] UnprotectedBytes()
+    {
         lock (Sync)
         {
             if (_form != 0) Pdfium.FORM_ForceToKillFocus(_form);
             using var stream = new MemoryStream();
             if (!Pdfium.SaveToStream(Handle, stream, removeSecurity: true)) throw new PdfException("The PDF could not be saved.");
-            bytes = stream.ToArray();
+            return stream.ToArray();
         }
-        string temp = path + ".visya-tmp";
-        File.WriteAllBytes(temp, bytes);
-        File.Move(temp, path, overwrite: true);
     }
 
     private byte[] SnapshotLocked()

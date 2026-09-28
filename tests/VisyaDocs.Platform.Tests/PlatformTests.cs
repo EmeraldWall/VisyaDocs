@@ -113,9 +113,11 @@ public class PlatformTests(ITestOutputHelper output)
     [Fact]
     public void PrintsAPdfWhoseAuthorRestrictedPrinting()
     {
-        // The app asks before printing such a file; the engine must still produce the pages.
-        using var doc = PdfDocument.Open(Path.Combine(AppContext.BaseDirectory, "assets", "restricted.pdf"));
-        Assert.False(doc.Permissions.CanPrint);
+        // PDFium prints blank pages for such a file, so after the user confirms the app prints an
+        // unrestricted in-memory copy. That copy must produce the real pages.
+        using var original = PdfDocument.Open(Path.Combine(AppContext.BaseDirectory, "assets", "restricted.pdf"));
+        Assert.False(original.Permissions.CanPrint);
+        using var doc = original.CreateUnprotectedCopy();
         string file = Path.Combine(Path.GetTempPath(), $"visya-print-restricted-{Guid.NewGuid():N}.pdf");
         try
         {

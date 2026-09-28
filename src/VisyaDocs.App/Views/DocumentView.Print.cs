@@ -44,8 +44,18 @@ public sealed partial class DocumentView
         if (job is null) return;
 
         int sheets = job.Pages.Count * job.Copies;
-        bool ok = await RunOperationAsync($"Printing {sheets} page(s)", (progress, ct) =>
-            PrintService.PrintAsync(_doc, job, _name, progress, ct));
+        bool ok = await RunOperationAsync($"Printing {sheets} page(s)", async (progress, ct) =>
+        {
+            if (_permissions.CanPrint)
+            {
+                await PrintService.PrintAsync(_doc, job, _name, progress, ct);
+                return;
+            }
+            // PDFium prints blank pages when the author disallowed printing, so after the user
+            // confirmed, print an unrestricted copy held in memory (nothing is written to disk).
+            using var copy = await Task.Run(_doc.CreateUnprotectedCopy, ct);
+            await PrintService.PrintAsync(copy, job, _name, progress, ct);
+        });
         if (ok) ShowMessage("Printing", $"Sent {sheets} page(s) to {job.PrinterName}.", InfoBarSeverity.Success, autoHide: true);
     }
 }
