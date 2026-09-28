@@ -227,8 +227,8 @@ public sealed unsafe partial class PdfDocument : IDisposable
 
     /// <summary>
     /// An in-memory copy without encryption and restrictions. Used to print a PDF whose author
-    /// disallowed printing (PDFium draws blank pages for such files when printing), after the
-    /// user confirmed.
+    /// disallowed printing, after the user confirmed, so the print path never depends on how the
+    /// engine treats the restriction.
     /// </summary>
     public PdfDocument CreateUnprotectedCopy() => Load(UnprotectedBytes());
 

@@ -51,8 +51,8 @@ public sealed partial class DocumentView
                 await PrintService.PrintAsync(_doc, job, _name, progress, ct);
                 return;
             }
-            // PDFium prints blank pages when the author disallowed printing, so after the user
-            // confirmed, print an unrestricted copy held in memory (nothing is written to disk).
+            // The author disallowed printing and the user chose to print anyway: print an
+            // unrestricted copy held in memory (nothing is written to disk).
             using var copy = await Task.Run(_doc.CreateUnprotectedCopy, ct);
             await PrintService.PrintAsync(copy, job, _name, progress, ct);
         });
