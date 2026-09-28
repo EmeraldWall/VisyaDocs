@@ -81,24 +81,38 @@ public sealed unsafe partial class PdfDocument
         Pdfium.FPDFPageObj_Destroy(oldObj);
     }
 
-    /// <summary>Adds new text with its first baseline starting at a page space point. Supports multiple lines.</summary>
-    public void AddText(int pageIndex, double x, double baselineY, string value, TextStyle style) => Mutate(() => WithPage(pageIndex, page =>
+    /// <summary>
+    /// Adds new text with its first baseline starting at a page space point. Supports multiple lines.
+    /// The text is upright as seen on screen, also on rotated pages.
+    /// </summary>
+    public void AddText(int pageIndex, double x, double baselineY, string value, TextStyle style)
     {
-        var lines = value.Replace("\r\n", "\n").Split('\n');
-        double lineHeight = style.FontSize * 1.2;
-        var c = style.TextColor;
-        for (int i = 0; i < lines.Length; i++)
+        var geometry = GetGeometry(pageIndex);
+        var (vx, vy) = geometry.ToView(x, baselineY);
+        Mutate(() => WithPage(pageIndex, page =>
         {
-            if (lines[i].Length == 0) continue;
-            nint obj = CreateTextObject(lines[i], style.FontSize, style.StandardFont);
-            Pdfium.FPDFPageObj_SetFillColor(obj, c.R, c.G, c.B, 255);
-            var m = new Pdfium.FS_MATRIX { a = 1, d = 1, e = (float)x, f = (float)(baselineY - i * lineHeight) };
-            Pdfium.FPDFPageObj_SetMatrix(obj, &m);
-            Pdfium.FPDFPage_InsertObject(page, obj);
-        }
-        if (Pdfium.FPDFPage_GenerateContent(page) == 0) throw new PdfException("The page could not be updated.");
-        return 0;
-    }));
+            var lines = value.Replace("\r\n", "\n").Split('\n');
+            double lineHeight = style.FontSize * 1.2;
+            var c = style.TextColor;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Length == 0) continue;
+                nint obj = CreateTextObject(lines[i], style.FontSize, style.StandardFont);
+                Pdfium.FPDFPageObj_SetFillColor(obj, c.R, c.G, c.B, 255);
+                // Unit box whose bottom left is the line's baseline start on screen.
+                var m = ToMatrix(geometry.UprightMatrix(new ViewRect(vx, vy + i * lineHeight - 1, 1, 1)));
+                Pdfium.FPDFPageObj_SetMatrix(obj, &m);
+                Pdfium.FPDFPage_InsertObject(page, obj);
+            }
+            if (Pdfium.FPDFPage_GenerateContent(page) == 0) throw new PdfException("The page could not be updated.");
+            return 0;
+        }));
+    }
+
+    private static Pdfium.FS_MATRIX ToMatrix((double A, double B, double C, double D, double E, double F) m) => new()
+    {
+        a = (float)m.A, b = (float)m.B, c = (float)m.C, d = (float)m.D, e = (float)m.E, f = (float)m.F,
+    };
 
     /// <summary>
     /// Writes recognized words as invisible text so a scanned page becomes searchable and selectable.
@@ -133,36 +147,40 @@ public sealed unsafe partial class PdfDocument
     }));
 
     /// <summary>
-    /// Places an image (for example a signature) on a page, stretched to the given page space
-    /// rectangle. Pixels are top-down BGRA with straight (not premultiplied) alpha; transparent
-    /// pixels let the page show through.
+    /// Places an image (for example a signature) on a page so it fills the given view rectangle
+    /// (points, top left origin, as shown on screen), upright whatever the page rotation. Pixels are
+    /// top-down BGRA with straight (not premultiplied) alpha; transparent pixels let the page show through.
     /// </summary>
-    public void AddImageStamp(int pageIndex, byte[] bgra, int width, int height, PdfRect bounds) => Mutate(() => WithPage(pageIndex, page =>
+    public void AddImageStamp(int pageIndex, byte[] bgra, int width, int height, ViewRect bounds)
     {
-        if (width <= 0 || height <= 0 || bgra.Length < width * height * 4) throw new ArgumentException("Invalid image size.");
-        fixed (byte* p = bgra)
+        var matrix = GetGeometry(pageIndex).UprightMatrix(bounds);
+        Mutate(() => WithPage(pageIndex, page =>
         {
-            nint bitmap = Pdfium.FPDFBitmap_CreateEx(width, height, Pdfium.FPDFBitmap_BGRA, p, width * 4);
-            if (bitmap == 0) throw new PdfException("The image is too large.");
-            try
+            if (width <= 0 || height <= 0 || bgra.Length < width * height * 4) throw new ArgumentException("Invalid image size.");
+            fixed (byte* p = bgra)
             {
-                nint image = Pdfium.FPDFPageObj_NewImageObj(Handle);
-                if (Pdfium.FPDFImageObj_SetBitmap(&page, 1, image, bitmap) == 0)
+                nint bitmap = Pdfium.FPDFBitmap_CreateEx(width, height, Pdfium.FPDFBitmap_BGRA, p, width * 4);
+                if (bitmap == 0) throw new PdfException("The image is too large.");
+                try
                 {
-                    Pdfium.FPDFPageObj_Destroy(image);
-                    throw new PdfException("The image could not be added.");
+                    nint image = Pdfium.FPDFPageObj_NewImageObj(Handle);
+                    if (Pdfium.FPDFImageObj_SetBitmap(&page, 1, image, bitmap) == 0)
+                    {
+                        Pdfium.FPDFPageObj_Destroy(image);
+                        throw new PdfException("The image could not be added.");
+                    }
+                    Pdfium.FPDFImageObj_SetMatrix(image, matrix.A, matrix.B, matrix.C, matrix.D, matrix.E, matrix.F);
+                    Pdfium.FPDFPage_InsertObject(page, image);
                 }
-                Pdfium.FPDFImageObj_SetMatrix(image, bounds.Width, 0, 0, bounds.Height, bounds.Left, bounds.Bottom);
-                Pdfium.FPDFPage_InsertObject(page, image);
+                finally
+                {
+                    Pdfium.FPDFBitmap_Destroy(bitmap);
+                }
             }
-            finally
-            {
-                Pdfium.FPDFBitmap_Destroy(bitmap);
-            }
-        }
-        if (Pdfium.FPDFPage_GenerateContent(page) == 0) throw new PdfException("The page could not be updated.");
-        return 0;
-    }));
+            if (Pdfium.FPDFPage_GenerateContent(page) == 0) throw new PdfException("The page could not be updated.");
+            return 0;
+        }));
+    }
 
     // Annotations -------------------------------------------------------------------------
 

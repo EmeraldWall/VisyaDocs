@@ -16,6 +16,8 @@ internal static unsafe partial class Pdfium
     public const int FPDFBitmap_BGRA = 4;
     public const int FPDF_ERR_PASSWORD = 4;
     public const int FPDF_NO_INCREMENTAL = 1 << 1;
+    public const int FPDF_REMOVE_SECURITY = 1 << 2;
+    public const uint PDFACTION_GOTO = 1, PDFACTION_URI = 3;
     public const int FPDF_PAGEOBJ_TEXT = 1;
     public const int FPDF_PAGEOBJ_IMAGE = 3;
     public const int FPDF_TEXTRENDERMODE_FILL = 0;
@@ -162,6 +164,28 @@ internal static unsafe partial class Pdfium
     [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
     public static partial CULong FPDFAnnot_GetStringValue(nint annot, string key, char* buffer, CULong length);
 
+    // Page rotation and removal
+    [LibraryImport(Lib)] public static partial int FPDFPage_GetRotation(nint page);
+    [LibraryImport(Lib)] public static partial void FPDFPage_SetRotation(nint page, int rotate);
+    [LibraryImport(Lib)] public static partial void FPDFPage_Delete(nint document, int index);
+
+    // Links and outline
+    [LibraryImport(Lib)] public static partial int FPDFLink_Enumerate(nint page, int* startPos, nint* link);
+    [LibraryImport(Lib)] public static partial int FPDFLink_GetAnnotRect(nint link, FS_RECTF* rect);
+    [LibraryImport(Lib)] public static partial nint FPDFLink_GetDest(nint document, nint link);
+    [LibraryImport(Lib)] public static partial nint FPDFLink_GetAction(nint link);
+    [LibraryImport(Lib)] public static partial CULong FPDFAction_GetType(nint action);
+    [LibraryImport(Lib)] public static partial nint FPDFAction_GetDest(nint document, nint action);
+    [LibraryImport(Lib)] public static partial CULong FPDFAction_GetURIPath(nint document, nint action, void* buffer, CULong length);
+    [LibraryImport(Lib)] public static partial int FPDFDest_GetDestPageIndex(nint document, nint dest);
+    [LibraryImport(Lib)]
+    public static partial int FPDFDest_GetLocationInPage(nint dest, int* hasX, int* hasY, int* hasZoom, float* x, float* y, float* zoom);
+    [LibraryImport(Lib)] public static partial nint FPDFBookmark_GetFirstChild(nint document, nint bookmark);
+    [LibraryImport(Lib)] public static partial nint FPDFBookmark_GetNextSibling(nint document, nint bookmark);
+    [LibraryImport(Lib)] public static partial CULong FPDFBookmark_GetTitle(nint bookmark, void* buffer, CULong length);
+    [LibraryImport(Lib)] public static partial nint FPDFBookmark_GetDest(nint document, nint bookmark);
+    [LibraryImport(Lib)] public static partial nint FPDFBookmark_GetAction(nint bookmark);
+
     // Document information
     [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
     public static partial CULong FPDF_GetMetaText(nint document, string tag, void* buffer, CULong length);
@@ -256,7 +280,7 @@ internal static unsafe partial class Pdfium
     }
 
     /// <summary>Writes a document to a stream through FPDF_SaveAsCopy.</summary>
-    public static bool SaveToStream(nint document, Stream stream)
+    public static bool SaveToStream(nint document, Stream stream, bool removeSecurity = false)
     {
         var handle = GCHandle.Alloc(stream);
         try
@@ -266,7 +290,8 @@ internal static unsafe partial class Pdfium
                 Base = new FPDF_FILEWRITE { version = 1, WriteBlock = &WriteBlock },
                 Stream = GCHandle.ToIntPtr(handle),
             };
-            return FPDF_SaveAsCopy(document, &writer.Base, new CULong(FPDF_NO_INCREMENTAL)) != 0;
+            int flags = FPDF_NO_INCREMENTAL | (removeSecurity ? FPDF_REMOVE_SECURITY : 0);
+            return FPDF_SaveAsCopy(document, &writer.Base, new CULong((uint)flags)) != 0;
         }
         finally
         {

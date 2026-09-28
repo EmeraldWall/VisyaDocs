@@ -102,7 +102,7 @@ public class FormsAndPropertiesTests
             for (int x = 0; x < w; x++)
                 (pixels[(y * w + x) * 4 + 2], pixels[(y * w + x) * 4 + 3]) = (220, 255);
         var stamp = new PdfRect(hit.Left, hit.Bottom - 10, hit.Left + 120, hit.Top + 10);
-        doc.AddImageStamp(0, pixels, w, h, stamp);
+        doc.AddImageStamp(0, pixels, w, h, doc.GetGeometry(0).ToView(stamp));
 
         using var reopened = PdfDocument.Load(doc.SaveToBytes());
         Assert.Contains("Signed here", reopened.GetPageText(0));

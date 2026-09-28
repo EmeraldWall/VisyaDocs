@@ -61,6 +61,12 @@ public sealed record TextSelection(int PageIndex, int Start, int Count, string T
 /// <summary>A recognized word positioned in page space, used to build a searchable text layer.</summary>
 public sealed record OcrWord(string Text, PdfRect Bounds);
 
+/// <summary>What a (possibly protected) document allows.</summary>
+public readonly record struct PdfPermissions(bool CanPrint, bool CanCopy, bool CanModify)
+{
+    public bool All => CanPrint && CanCopy && CanModify;
+}
+
 public class PdfException(string message) : Exception(message);
 
 public sealed class PdfPasswordException() : PdfException("This PDF is protected. Enter the password to open it.");
