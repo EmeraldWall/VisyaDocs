@@ -38,6 +38,14 @@ public sealed unsafe partial class PdfDocument : IDisposable
     public event EventHandler? Changed;
 
     public string? FilePath { get; private set; }
+
+    /// <summary>
+    /// Changes whenever pages may have been added, removed, rotated or resized (page tools, append,
+    /// undo, redo), so a viewer knows to measure its pages again.
+    /// </summary>
+    public int LayoutVersion { get; private set; }
+
+    internal void BumpLayout() => LayoutVersion++;
     public bool IsDirty { get; private set; }
     public bool CanUndo { get { lock (Sync) return _undo.Count > 0; } }
     public bool CanRedo { get { lock (Sync) return _redo.Count > 0; } }
@@ -241,6 +249,7 @@ public sealed unsafe partial class PdfDocument : IDisposable
             to.Push(SnapshotLocked());
             to.Trim(MaxUndo, MaxHistoryBytes);
             ReplaceLocked(from.Pop());
+            LayoutVersion++;
             IsDirty = true;
         }
         Changed?.Invoke(this, EventArgs.Empty);

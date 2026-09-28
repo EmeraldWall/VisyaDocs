@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.UI;
+using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -60,6 +61,14 @@ public sealed partial class DocumentView
         Scroller.Focus(FocusState.Pointer);
         var pagePoint = page.ToPage(point.Position);
 
+        // Links work while reading (Select tool): a click follows them instead of starting a selection.
+        if (_tool == EditTool.Select && page.LinkAt(pagePoint.X, pagePoint.Y) is { } link)
+        {
+            e.Handled = true;
+            _ = FollowLinkAsync(link);
+            return;
+        }
+
         switch (_tool)
         {
             case EditTool.Select:
@@ -92,7 +101,12 @@ public sealed partial class DocumentView
 
     private void Overlay_PointerMoved(object sender, PointerRoutedEventArgs e)
     {
-        if (!_selecting || PageOf(sender) is not { } page || page != _selectionPage) return;
+        if (!_selecting)
+        {
+            if (PageOf(sender) is { } hovered) UpdateHover(hovered, e);
+            return;
+        }
+        if (PageOf(sender) is not { } page || page != _selectionPage) return;
         if (_moveThrottle.ElapsedMilliseconds < 35) return;
         _moveThrottle.Restart();
         var pagePoint = page.ToPage(e.GetCurrentPoint(page.Overlay).Position);
@@ -115,6 +129,43 @@ public sealed partial class DocumentView
     }
 
     private void Overlay_PointerCaptureLost(object sender, PointerRoutedEventArgs e) => _selecting = false;
+
+    private readonly Stopwatch _hoverThrottle = Stopwatch.StartNew();
+    private PageView? _hoverPage;
+
+    /// <summary>
+    /// Pointer feedback without clicking: a hand over links while reading, and in Edit text mode an
+    /// outline around the text run that a click would edit.
+    /// </summary>
+    private void UpdateHover(PageView page, PointerRoutedEventArgs e)
+    {
+        if (_hoverThrottle.ElapsedMilliseconds < 60 || _editor is not null) return;
+        _hoverThrottle.Restart();
+        var p = page.ToPage(e.GetCurrentPoint(page.Overlay).Position);
+        if (_tool == EditTool.Select)
+        {
+            page.SetCursor(page.LinkAt(p.X, p.Y) is null ? InputSystemCursorShape.IBeam : InputSystemCursorShape.Hand);
+        }
+        else if (_tool == EditTool.EditText)
+        {
+            if (_hoverPage is not null && _hoverPage != page) _hoverPage.ShowHover(null);
+            _hoverPage = page;
+            TextObjectInfo? info = null;
+            try
+            {
+                info = _doc.FindTextObjectAt(page.Index, p.X, p.Y);
+            }
+            catch (PdfException)
+            {
+            }
+            page.ShowHover(info?.Bounds);
+        }
+    }
+
+    private void Overlay_PointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        if (PageOf(sender) is { } page) page.ShowHover(null);
+    }
 
     private void Overlay_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
@@ -181,6 +232,11 @@ public sealed partial class DocumentView
     private bool CopySelection()
     {
         if (_selection is not { Count: > 0 } selection) return false;
+        if (!_permissions.CanCopy)
+        {
+            ShowMessage("Copying is not allowed", "The author of this PDF does not allow copying its text.", InfoBarSeverity.Warning, autoHide: true);
+            return true;
+        }
         var package = new DataPackage();
         package.SetText(selection.Text);
         Clipboard.SetContent(package);

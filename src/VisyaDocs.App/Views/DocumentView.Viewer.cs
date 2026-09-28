@@ -73,6 +73,7 @@ public sealed partial class DocumentView
             page.Overlay.PointerCaptureLost += Overlay_PointerCaptureLost;
             page.Overlay.DoubleTapped += Overlay_DoubleTapped;
             page.Overlay.RightTapped += Overlay_RightTapped;
+            page.Overlay.PointerExited += Overlay_PointerExited;
             page.SetScale(_zoom * PtToDip);
             ApplyAppearance(page);
             _pages.Add(page);
@@ -351,6 +352,8 @@ public sealed partial class DocumentView
 
     private void Scroller_KeyDown(object sender, KeyRoutedEventArgs e)
     {
+        // Keys typed into a form field, an editor or a control on the page belong to that control.
+        if (e.OriginalSource is TextBox or ComboBox or ComboBoxItem or Button or PasswordBox) return;
         switch (e.Key)
         {
             case VirtualKey.Home:
@@ -417,6 +420,11 @@ public sealed partial class DocumentView
             }
             _currentPage = Math.Max(0, current);
         }
+        if (_currentPage != _reportedPage)
+        {
+            _reportedPage = _currentPage;
+            SyncThumbnail();
+        }
 
         if (PageBox.FocusState == FocusState.Unfocused) PageBox.Text = (_currentPage + 1).ToString(CultureInfo.CurrentCulture);
         _ = RenderLoopAsync();
@@ -450,10 +458,11 @@ public sealed partial class DocumentView
                 bool needOverlays = page.HotspotVersion != version;
                 bool wantForm = _doc.HasForm;
 
-                var (pixels, notes, fields) = await Task.Run(() => (
+                var (pixels, notes, fields, links) = await Task.Run(() => (
                     _doc.RenderPage(index, pw, ph),
                     needOverlays ? _doc.GetAnnotations(index) : null,
-                    needOverlays && wantForm ? _doc.GetFormFields(index) : null));
+                    needOverlays && wantForm ? _doc.GetFormFields(index) : null,
+                    needOverlays ? _doc.GetLinks(index) : null));
 
                 if (_disposed || index >= _pages.Count || _pages[index] != page) continue;
                 var bitmap = new WriteableBitmap(pw, ph);
@@ -463,6 +472,7 @@ public sealed partial class DocumentView
                 if (notes is not null && version == _contentVersion)
                 {
                     ShowNoteHotspots(page, notes, version);
+                    page.Links = links ?? [];
                     page.FormFields = fields ?? [];
                     ShowFormOverlays(page);
                 }
@@ -520,7 +530,18 @@ public sealed partial class DocumentView
     {
         bool show = ThumbsToggle.IsChecked == true;
         if (show && _thumbs.Count != _pages.Count) BuildThumbnails();
-        ThumbList.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        LeftPane.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (show) SyncThumbnail();
+    }
+
+    private int _reportedPage = -1;
+
+    /// <summary>Selects and reveals the thumbnail of the page being read.</summary>
+    private void SyncThumbnail()
+    {
+        if (LeftPane.Visibility != Visibility.Visible || _currentPage >= _thumbs.Count) return;
+        if (ThumbList.SelectedIndex != _currentPage) ThumbList.SelectedIndex = _currentPage;
+        ThumbList.ScrollIntoView(_thumbs[_currentPage]);
     }
 
     private void BuildThumbnails()
@@ -622,7 +643,13 @@ public sealed partial class DocumentView
         else StepHit(-1);
     }
 
-    private async Task RunSearchAsync(string query)
+    private void SearchOption_Click(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(SearchBox.Text)) _ = RunSearchAsync(SearchBox.Text);
+    }
+
+    /// <summary>Searches the document. After an edit the search is re-run quietly (no jump).</summary>
+    private async Task RunSearchAsync(string query, bool navigate = true)
     {
         _searchCts?.Cancel();
         var cts = _searchCts = new CancellationTokenSource();
@@ -635,12 +662,16 @@ public sealed partial class DocumentView
         SearchStatus.Text = "...";
         try
         {
-            var hits = await Task.Run(() => _doc.Search(query, cancellationToken: cts.Token), cts.Token);
+            bool matchCase = MatchCaseToggle.IsChecked == true, wholeWord = WholeWordToggle.IsChecked == true;
+            int previous = _hitIndex;
+            var hits = await Task.Run(() => _doc.Search(query, matchCase, wholeWord, cts.Token), cts.Token);
             if (cts.IsCancellationRequested || _disposed) return;
             _hits = hits;
-            _hitIndex = hits.Count == 0 ? -1 : Math.Max(0, hits.ToList().FindIndex(h => h.PageIndex >= _currentPage));
+            _hitIndex = hits.Count == 0 ? -1
+                : !navigate && previous >= 0 ? Math.Min(previous, hits.Count - 1)
+                : Math.Max(0, hits.ToList().FindIndex(h => h.PageIndex >= _currentPage));
             ShowSearchMarks();
-            if (_hitIndex >= 0) GoToPage(_hits[_hitIndex].PageIndex, _hits[_hitIndex].Rects.FirstOrDefault());
+            if (navigate && _hitIndex >= 0) GoToPage(_hits[_hitIndex].PageIndex, _hits[_hitIndex].Rects.FirstOrDefault());
         }
         catch (OperationCanceledException)
         {

@@ -20,6 +20,7 @@ public enum DocCommand
     ExportJpeg,
     AppendPdf,
     AppendImages,
+    RemovePassword,
 }
 
 // File menu commands and the movable tool rail.
@@ -45,6 +46,7 @@ public sealed partial class DocumentView
             case DocCommand.ExportJpeg: ExportImages_Click(new Border { Tag = "Jpeg" }, none); break;
             case DocCommand.AppendPdf: AppendPdf_Click(this, none); break;
             case DocCommand.AppendImages: AppendImages_Click(this, none); break;
+            case DocCommand.RemovePassword: _ = RemovePasswordAsync(); break;
         }
     }
 

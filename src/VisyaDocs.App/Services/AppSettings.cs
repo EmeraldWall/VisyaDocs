@@ -60,6 +60,23 @@ public sealed class AppSettings
     /// <summary>Vertical position of the tool rail as a fraction of the free space (0 top, 0.5 centered).</summary>
     public double RailTop { get; set; } = 0.5;
 
+    /// <summary>Last page read per file (most recent first), restored when the file is opened again.</summary>
+    public List<FilePosition> Positions { get; set; } = [];
+
+    /// <summary>Whether the one-time welcome tip has been shown.</summary>
+    public bool TipShown { get; set; }
+
+    public int? GetPosition(string path) =>
+        Positions.FirstOrDefault(p => string.Equals(p.Path, path, StringComparison.OrdinalIgnoreCase))?.Page;
+
+    public void SetPosition(string path, int page)
+    {
+        Positions.RemoveAll(p => string.Equals(p.Path, path, StringComparison.OrdinalIgnoreCase));
+        Positions.Insert(0, new FilePosition { Path = path, Page = page });
+        if (Positions.Count > 50) Positions.RemoveRange(50, Positions.Count - 50);
+        Save();
+    }
+
     public static string SignaturesFolder { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VisyaDocs", "signatures");
 
@@ -99,6 +116,12 @@ public sealed class AppSettings
         }
         return new AppSettings();
     }
+}
+
+public sealed class FilePosition
+{
+    public string Path { get; set; } = string.Empty;
+    public int Page { get; set; }
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true, UseStringEnumConverter = true)]

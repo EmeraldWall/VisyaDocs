@@ -12,6 +12,7 @@
             <KeyboardAccelerator Modifiers="Control" Key="W" Invoked="CloseTabAccelerator_Invoked" />
             <KeyboardAccelerator Modifiers="Control" Key="Tab" Invoked="NextTabAccelerator_Invoked" />
             <KeyboardAccelerator Key="F11" Invoked="FullScreenAccelerator_Invoked" />
+            <KeyboardAccelerator Key="F1" Invoked="ShortcutsAccelerator_Invoked" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition x:Name="TitleRow" Height="32" />
@@ -96,12 +97,18 @@
                                 <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/append-images.svg" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                         </MenuFlyoutSubItem>
+                        <MenuFlyoutItem x:Name="RemovePasswordItem" Text="Save a copy without password..." Tag="RemovePassword" Click="DocCommand_Click">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE785;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
                         <MenuFlyoutItem x:Name="PropertiesItem" Text="Properties" Tag="Properties" Click="DocCommand_Click" KeyboardAcceleratorTextOverride="Ctrl+D">
                             <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/properties.svg" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem Text="Full screen" Click="FullScreen_Click" KeyboardAcceleratorTextOverride="F11">
                             <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/fullscreen.svg" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Keyboard shortcuts" Click="Shortcuts_Click" KeyboardAcceleratorTextOverride="F1">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE765;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                         <MenuFlyoutItem Text="Settings" Click="Settings_Click">
                             <MenuFlyoutItem.Icon><ImageIcon Source="ms-appx:///Assets/Icons/settings.svg" /></MenuFlyoutItem.Icon>

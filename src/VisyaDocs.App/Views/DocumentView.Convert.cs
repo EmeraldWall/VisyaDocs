@@ -32,6 +32,7 @@ public sealed partial class DocumentView
 
     private async void MakeSearchable_Click(object sender, RoutedEventArgs e)
     {
+        if (!Permitted(_permissions.CanModify, "changes")) return;
         string recognized = string.Empty;
         bool ok = await RunOperationAsync("Recognizing text", async (progress, ct) =>
             recognized = await OcrService.MakeSearchableAsync(_doc, AllPages, AppSettings.Current.OcrLanguage, progress, ct));
@@ -48,6 +49,7 @@ public sealed partial class DocumentView
 
     private async void ExtractText_Click(object sender, RoutedEventArgs e)
     {
+        if (!Permitted(_permissions.CanCopy, "copying text")) return;
         IReadOnlyList<string> texts = [];
         bool ok = await RunOperationAsync("Extracting text", async (progress, ct) => texts = await GetPageTextsAsync(AllPages, progress, ct));
         if (!ok) return;
@@ -135,11 +137,17 @@ public sealed partial class DocumentView
         }
     }
 
-    private async void ExportWord_Click(object sender, RoutedEventArgs e) =>
+    private async void ExportWord_Click(object sender, RoutedEventArgs e)
+    {
+        if (!Permitted(_permissions.CanCopy, "copying text")) return;
         await ExportDocumentTextAsync("Export to Word", "Word document", ".docx", Converter.WriteDocx);
+    }
 
-    private async void ExportText_Click(object sender, RoutedEventArgs e) =>
+    private async void ExportText_Click(object sender, RoutedEventArgs e)
+    {
+        if (!Permitted(_permissions.CanCopy, "copying text")) return;
         await ExportDocumentTextAsync("Export to text", "Text file", ".txt", Converter.WriteText);
+    }
 
     private async Task ExportDocumentTextAsync(string title, string typeName, string extension, Action<string, IReadOnlyList<string>> write)
     {
@@ -158,6 +166,7 @@ public sealed partial class DocumentView
 
     private async void ExportImages_Click(object sender, RoutedEventArgs e)
     {
+        if (!Permitted(_permissions.CanCopy, "copying its pages")) return;
         var format = (sender as FrameworkElement)?.Tag as string == "Jpeg" ? ExportFormat.Jpeg : ExportFormat.Png;
         var options = await Dialogs.AskExportOptionsAsync(XamlRoot, $"Export pages as {(format == ExportFormat.Jpeg ? "JPEG" : "PNG")}",
             _doc.PageCount, images: true);
@@ -173,6 +182,7 @@ public sealed partial class DocumentView
 
     private async void AppendPdf_Click(object sender, RoutedEventArgs e)
     {
+        if (!Permitted(_permissions.CanModify, "changes")) return;
         var files = await Pickers.OpenFilesAsync(".pdf");
         if (files.Count == 0) return;
         await RunOperationAsync("Appending pages", async (progress, ct) =>
@@ -189,6 +199,7 @@ public sealed partial class DocumentView
 
     private async void AppendImages_Click(object sender, RoutedEventArgs e)
     {
+        if (!Permitted(_permissions.CanModify, "changes")) return;
         var files = await Pickers.OpenFilesAsync(ImageTools.SupportedImageExtensions);
         if (files.Count == 0) return;
         await RunOperationAsync("Adding images", (progress, ct) => ImageTools.AppendImagesAsync(_doc, files, progress, ct));

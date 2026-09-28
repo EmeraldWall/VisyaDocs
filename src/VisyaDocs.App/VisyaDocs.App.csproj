@@ -22,6 +22,8 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <DefaultLanguage>en-US</DefaultLanguage>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- Program.cs provides Main (single instance redirection). -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

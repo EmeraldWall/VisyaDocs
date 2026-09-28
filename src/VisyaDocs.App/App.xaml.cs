@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using VisyaDocs.App.Services;
 using VisyaDocs.Core;
 
 namespace VisyaDocs.App;
@@ -25,6 +26,26 @@ public partial class App : Application
 
         var files = Environment.GetCommandLineArgs().Skip(1).Where(File.Exists).ToArray();
         if (files.Length > 0) MainWindow.OpenFiles(files);
+    }
+
+    /// <summary>Another launch (for example a double-clicked PDF) was handed to this instance.</summary>
+    public static void OnRedirectedActivation(Microsoft.Windows.AppLifecycle.AppActivationArguments args)
+    {
+        var files = new List<string>();
+        if (args.Kind == Microsoft.Windows.AppLifecycle.ExtendedActivationKind.File
+            && args.Data is Windows.ApplicationModel.Activation.IFileActivatedEventArgs fileArgs)
+        {
+            files.AddRange(fileArgs.Files.Select(f => f.Path));
+        }
+        else if (args.Data is Windows.ApplicationModel.Activation.ILaunchActivatedEventArgs launch)
+        {
+            files.AddRange(CommandLine.Split(launch.Arguments).Where(File.Exists));
+        }
+        MainWindow?.DispatcherQueue.TryEnqueue(() =>
+        {
+            MainWindow.BringToFront();
+            if (files.Count > 0) MainWindow.OpenFiles(files);
+        });
     }
 
     private static void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)

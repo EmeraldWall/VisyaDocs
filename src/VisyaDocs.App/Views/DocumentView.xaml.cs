@@ -105,6 +105,7 @@ public sealed partial class DocumentView : UserControl, IDisposable
     public void Dispose()
     {
         if (_disposed) return;
+        RememberPosition();
         _disposed = true;
         _operation?.Cancel();
         _searchCts?.Cancel();
@@ -117,6 +118,8 @@ public sealed partial class DocumentView : UserControl, IDisposable
         await BuildPagesAsync();
         if (_layout == ViewLayout.SinglePage) SetZoom(FitPageZoom(), ZoomKind.FitPage);
         else SetZoom(Math.Min(FitWidthZoom(), 1.5), ZoomKind.FitWidth);
+        _layoutVersion = _doc.LayoutVersion;
+        await OnOpenedAsync();
         if (_doc.HasForm)
         {
             FormTool.Visibility = Visibility.Visible;
@@ -133,9 +136,13 @@ public sealed partial class DocumentView : UserControl, IDisposable
         TitleChanged?.Invoke(this, EventArgs.Empty);
         UpdateUndoRedo();
         ClearSelection();
-        ClearSearchMarks();
-        if (_doc.PageCount != _pages.Count)
+        // Keep search results visible after an edit (for example after filling a form field).
+        if (SearchPanel.Visibility == Visibility.Visible && _lastQuery.Length > 0) _ = RunSearchAsync(_lastQuery, navigate: false);
+        else ClearSearchMarks();
+        if (_doc.PageCount != _pages.Count || _doc.LayoutVersion != _layoutVersion)
         {
+            // Pages were added, removed or rotated: measure them again.
+            _layoutVersion = _doc.LayoutVersion;
             _ = RebuildAfterPageCountChangeAsync();
             return;
         }
@@ -144,11 +151,15 @@ public sealed partial class DocumentView : UserControl, IDisposable
         if (SidePane.Visibility == Visibility.Visible && CommentsPanel.Visibility == Visibility.Visible) _ = RefreshCommentsAsync();
     }
 
+    private int _layoutVersion;
+
     private async Task RebuildAfterPageCountChangeAsync()
     {
+        int page = _currentPage;
         await BuildPagesAsync();
-        SetZoom(_zoom, _zoomKind);
+        SetZoom(_zoomKind switch { ZoomKind.FitWidth => FitWidthZoom(), ZoomKind.FitPage => FitPageZoom(), _ => _zoom }, _zoomKind);
         if (_thumbs.Count > 0) BuildThumbnails();
+        GoToPage(Math.Min(page, _pages.Count - 1));
     }
 
     private void UpdateUndoRedo()
@@ -162,12 +173,20 @@ public sealed partial class DocumentView : UserControl, IDisposable
     private void Tool_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: string tag } && Enum.TryParse<EditTool>(tag, out var tool))
+        {
+            if (tool is EditTool.EditText or EditTool.AddText && !Permitted(_permissions.CanModify, "changes"))
+            {
+                SetTool(_tool);
+                return;
+            }
             SetTool(tool == _tool && tool != EditTool.Select ? EditTool.Select : tool);
+        }
     }
 
     private void SetTool(EditTool tool)
     {
         CommitEditor();
+        _hoverPage?.ShowHover(null);
         if (_tool == EditTool.PlaceSignature && tool != EditTool.PlaceSignature) CancelSignaturePlacement();
         bool formChanged = (_tool == EditTool.FillForm) != (tool == EditTool.FillForm);
         _tool = tool;

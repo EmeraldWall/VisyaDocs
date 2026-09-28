@@ -60,6 +60,7 @@ public sealed unsafe partial class PdfDocument
             Pdfium.FPDFImageObj_SetMatrix(image, pageWidth, 0, 0, pageHeight, 0, 0);
             Pdfium.FPDFPage_InsertObject(page, image);
             if (Pdfium.FPDFPage_GenerateContent(page) == 0) throw new PdfException("The page could not be created.");
+            BumpLayout();
         }
         finally
         {
@@ -72,6 +73,7 @@ public sealed unsafe partial class PdfDocument
     {
         if (Pdfium.FPDF_ImportPages(Handle, other.Handle, null, Pdfium.FPDF_GetPageCount(Handle)) == 0)
             throw new PdfException("The pages could not be imported.");
+        BumpLayout();
         return 0;
     });
 
@@ -83,6 +85,7 @@ public sealed unsafe partial class PdfDocument
     {
         int rotation = ((Pdfium.FPDFPage_GetRotation(page) + quarterTurns) % 4 + 4) % 4;
         Pdfium.FPDFPage_SetRotation(page, rotation);
+        BumpLayout();
         return 0;
     }));
 
@@ -93,6 +96,7 @@ public sealed unsafe partial class PdfDocument
         if ((uint)pageIndex >= (uint)count) throw new ArgumentOutOfRangeException(nameof(pageIndex));
         if (count == 1) throw new PdfException("A document needs at least one page.");
         Pdfium.FPDFPage_Delete(Handle, pageIndex);
+        BumpLayout();
         return 0;
     });
 
