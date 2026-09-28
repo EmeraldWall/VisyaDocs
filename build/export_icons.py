@@ -6,7 +6,7 @@ Sources:
   assets/icon/visarypdf.png   the logo (large, transparent background); every size is scaled from it
   assets/icon/pdf-badge.svg   the "PDF" tag added for the .pdf file icon
 
-Writes into src/VisyaDocs.App/Assets:
+Writes into src/VisaryPDF.App/Assets:
   VisaryPDF.ico       EXE, window and taskbar icon (16 to 256 px)
   PdfFile.ico         icon for .pdf files associated with the app
   AppLogo.png         in-app logo (home screen), AppLogoSmall.png (title bar)
@@ -21,7 +21,7 @@ from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "assets" / "icon"
-OUT = ROOT / "src" / "VisyaDocs.App" / "Assets"
+OUT = ROOT / "src" / "VisaryPDF.App" / "Assets"
 
 
 def master() -> Image.Image:

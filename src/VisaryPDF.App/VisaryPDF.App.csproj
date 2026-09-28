@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <RootNamespace>VisaryPDF.App</RootNamespace>
+    <AssemblyName>VisaryPDF</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\VisaryPDF.ico</ApplicationIcon>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' And '$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <!-- Default profile (also read on every build): the MSIX one. The folder build passes PublishProfile=win-x64 or win-ARM64. -->
+    <PublishProfile Condition="'$(PublishProfile)' == ''">msix-$(Platform).pubxml</PublishProfile>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <!--
+      Packaged (MSIX) by default: Visual Studio deploys it like an installed app (F5, Deploy) and
+      "Package and Publish > Create App Packages" builds sideload and Microsoft Store packages.
+      The folder build (publish profiles win-x64 / win-ARM64) sets WindowsPackageType=None and runs
+      from a plain folder with nothing to install.
+    -->
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- Program.cs provides Main (single instance redirection). -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <!-- A desktop reader does not need a background GC thread; the heap stays small. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Ask the GC to compact more eagerly (large page buffers) instead of growing the heap. -->
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**" />
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Only the WinUI and Foundation parts of the Windows App SDK: keeps AI/ML runtimes out of the app. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.260803003" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="1.8.260803002" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VisaryPDF.Core\VisaryPDF.Core.csproj" />
+    <ProjectReference Include="..\VisaryPDF.Platform\VisaryPDF.Platform.csproj" />
+  </ItemGroup>
+
+  <Import Project="..\..\build\Pdfium.targets" />
+
+  <!-- Native AOT still writes a PDB next to the exe; keep release folders free of symbols. -->
+  <Target Name="VisaryRemovePublishedSymbols" AfterTargets="Publish" Condition="'$(DebugType)' == 'none'">
+    <ItemGroup>
+      <_VisaryPublishedPdb Include="$(PublishDir)**\*.pdb" />
+    </ItemGroup>
+    <Delete Files="@(_VisaryPublishedPdb)" />
+  </Target>
+</Project>

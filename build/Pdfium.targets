@@ -27,7 +27,7 @@
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 
-  <Target Name="VisyaFetchPdfium" BeforeTargets="BeforeBuild;AssignTargetPaths"
+  <Target Name="VisaryFetchPdfium" BeforeTargets="BeforeBuild;AssignTargetPaths"
           Condition="'$(_PdfiumArchive)' != '' And !Exists('$(_PdfiumLib)')">
     <Message Importance="high" Text="Downloading PDFium $(PdfiumRelease) for $(_PdfiumRid)" />
     <MakeDir Directories="$(_PdfiumDir)" />
@@ -37,7 +37,7 @@
     <Error Condition="!Exists('$(_PdfiumLib)')" Text="PDFium library not found after download: $(_PdfiumLib)" />
   </Target>
 
-  <Target Name="VisyaWarnNoPdfium" BeforeTargets="BeforeBuild" Condition="'$(_PdfiumArchive)' == ''">
+  <Target Name="VisaryWarnNoPdfium" BeforeTargets="BeforeBuild" Condition="'$(_PdfiumArchive)' == ''">
     <Warning Text="No PDFium binary is mapped for runtime '$(_PdfiumRid)'." />
   </Target>
 </Project>
