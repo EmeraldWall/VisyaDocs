@@ -114,8 +114,9 @@ jobs:
             -p:PackageCertificateKeyFile="$PWD/test.pfx" -p:PackageCertificatePassword=ci-test `
             -p:AppxPackageDir="$PWD/packages/"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $msix = Get-ChildItem packages -Recurse -Include *.msix | Select-Object -First 1
-          if (-not $msix) { Write-Error "No .msix was produced"; exit 1 }
+          # With images for several display scales the output is a bundle (app + per scale resources).
+          $msix = Get-ChildItem packages -Recurse -Include *.msixbundle, *.msix | Sort-Object { $_.Extension -ne '.msixbundle' } | Select-Object -First 1
+          if (-not $msix) { Write-Error "No .msix or .msixbundle was produced"; exit 1 }
           "MSIX: $($msix.Name), $([math]::Round($msix.Length / 1MB, 1)) MB" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
           "MSIX_PATH=$($msix.FullName)" >> $env:GITHUB_ENV
 
@@ -139,5 +140,6 @@ jobs:
           name: VisaryPDF-x64-msix-test
           path: |
             packages/**/*.msix
+            packages/**/*.msixbundle
             VisaryPDF-test.cer
           if-no-files-found: error
