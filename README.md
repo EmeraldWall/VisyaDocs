@@ -89,7 +89,7 @@ Only pages on screen (plus a little ahead) keep a rendered image, page images ar
 
 ## Build
 
-Needs the .NET 10 SDK. Visual Studio 2022/2026 with the "Windows application development" workload is the easiest way to run and debug.
+Needs the .NET 10 SDK and Visual Studio 2026 with the **WinUI application development**, **.NET desktop development** and **Desktop development with C++** workloads (the C++ tools are needed for the Native AOT release build). Full setup, local install and Microsoft Store steps: [docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 ```powershell
 # Run tests (the PDFium binary for your machine is downloaded automatically on first build)
