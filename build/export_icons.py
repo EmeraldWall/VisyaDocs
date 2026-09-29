@@ -85,16 +85,27 @@ def main() -> None:
     write_ico(OUT / "VisaryPDF.ico")
     write_ico(OUT / "PdfFile.ico", pdf=True, sizes=(16, 24, 32, 48, 64, 256))
 
-    # MSIX visual assets (scale-200 plus unplated target sizes for the taskbar and Start).
-    write_png("Square44x44Logo.scale-200.png", 88, 88, 80)
+    # MSIX visual assets, one file per display scale with the qualifier in the name (the set Visual
+    # Studio's manifest designer generates and validates: exact pixel sizes per scale).
+    for old in [*OUT.glob("Square44x44Logo*.png"), *OUT.glob("Square150x150Logo*.png"), *OUT.glob("Wide310x150Logo*.png"),
+                *OUT.glob("StoreLogo*.png"), *OUT.glob("SplashScreen*.png"), *OUT.glob("LockScreenLogo*.png"),
+                *OUT.glob("PdfFileLogo*.png")]:
+        old.unlink()
+    for scale in (100, 125, 150, 200, 400):
+        f = scale / 100
+        px = lambda n: round(n * f)
+        write_png(f"Square44x44Logo.scale-{scale}.png", px(44), px(44), px(40))
+        write_png(f"Square150x150Logo.scale-{scale}.png", px(150), px(150), px(100))
+        write_png(f"Wide310x150Logo.scale-{scale}.png", px(310), px(150), px(110))
+        write_png(f"StoreLogo.scale-{scale}.png", px(50), px(50), px(50))
+        write_png(f"LockScreenLogo.scale-{scale}.png", px(24), px(24), px(24))
+        write_png(f"PdfFileLogo.scale-{scale}.png", px(44), px(44), px(44), pdf=True)
+        if scale <= 200:  # larger splash images only add size; Windows scales these fine
+            write_png(f"SplashScreen.scale-{scale}.png", px(620), px(300), px(180))
     for s in (16, 24, 32, 48, 256):
+        write_png(f"Square44x44Logo.targetsize-{s}.png", s, s, s)
         write_png(f"Square44x44Logo.targetsize-{s}_altform-unplated.png", s, s, s)
-    write_png("Square150x150Logo.scale-200.png", 300, 300, 200)
-    write_png("Wide310x150Logo.scale-200.png", 620, 300, 220)
-    write_png("LockScreenLogo.scale-200.png", 48, 48, 48)
-    write_png("StoreLogo.png", 50, 50, 50)
-    write_png("SplashScreen.scale-200.png", 1240, 600, 360)
-    write_png("PdfFileLogo.png", 64, 64, 64, pdf=True)
+        write_png(f"PdfFileLogo.targetsize-{s}.png", s, s, s, pdf=True)
     # In-app logos, large enough to stay sharp up to 400% display scale.
     write_png("AppLogo.png", 256, 256, 256)        # home screen, shown at 64 DIPs
     write_png("AppLogoSmall.png", 64, 64, 64)      # title bar, shown at 16 DIPs
