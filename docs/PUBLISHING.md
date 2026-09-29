@@ -1,8 +1,23 @@
 # Install locally, take screenshots and publish VisaryPDF to the Microsoft Store
 
-Everything below is done in Visual Studio (2022 17.10 or newer, or 2026) with the **Windows application development** workload and the **.NET 10 SDK**.
+Everything below is done in **Visual Studio 2026**. VisaryPDF targets .NET 10, which Visual Studio supports from version 2026 (18.0) on; Visual Studio 2022 cannot build it ([SDK and Visual Studio versions](https://learn.microsoft.com/en-us/dotnet/core/porting/versioning-sdk-msbuild-vs)).
 
 The solution is `VisaryPDF.sln`; the app project (`src/VisaryPDF.App`) is packaged as MSIX.
+
+---
+
+## Part 0. Set up the PC (once)
+
+1. **Install Visual Studio 2026** (Community is free) from https://visualstudio.microsoft.com. In the installer, on **Workloads**, tick:
+   - **WinUI application development** (Windows App SDK, MSIX packaging tools)
+   - **.NET desktop development**
+   - **Desktop development with C++**. Needed because the release build is compiled ahead of time (Native AOT), which uses the C++ linker ([Native AOT prerequisites](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/)).
+   Then on **Individual components** search "ARM64" and tick **MSVC ARM64/ARM64EC build tools (Latest)** (only needed for the ARM64 package).
+2. **Install the .NET 10 SDK** if the installer did not already add it: https://dotnet.microsoft.com/download/dotnet/10.0 (x64 installer).
+3. **Turn on Developer Mode**: Windows Settings > System > For developers (Windows 10: Update & Security > For developers) > **Developer Mode** on. Visual Studio needs it to install the app on this PC.
+4. **Get the code**: in Visual Studio, **Clone a repository**, paste the GitHub address of the repository, choose a folder, **Clone**. When it finishes, open **VisaryPDF.sln** (File > Open > Project/Solution, or double click it in Solution Explorer's folder view).
+5. **First build**: wait until Visual Studio finishes restoring packages (status bar), then **Build > Build Solution** (Ctrl+Shift+B). The first build also downloads the PDF engine (PDFium) for x64 and ARM64 automatically. The Output window should end with `Build succeeded`.
+6. **Optional, run the tests**: **Test > Run All Tests**. The Core and Platform tests should pass.
 
 ---
 
