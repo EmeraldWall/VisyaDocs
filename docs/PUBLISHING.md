@@ -36,7 +36,7 @@ To remove it later: Start menu, right click VisaryPDF, **Uninstall**.
 
 1. In Solution Explorer right click **VisaryPDF.App** > **Package and Publish** > **Create App Packages...** (older versions: **Publish** > **Create App Packages...**).
 2. Choose **Sideloading**, keep **Enable automatic updates** off, **Next**.
-3. Signing: **Create...** a test certificate (publisher `CN=VisaryPDF`), **Next**.
+3. Signing: **Create...** a test certificate (publisher `CN=65DD6B51-E5AD-470C-A620-4A4E40DE2F38`, the Store publisher in the manifest), **Next**.
 4. Select **x64** (and **ARM64** if wanted), Release, publish profile **msix-x64** / **msix-ARM64**, then **Create**.
 5. The output folder (`AppPackages`) contains the package (`VisaryPDF.App_1.0.0.0_x64.msixbundle`, or `.msix`) and a `.cer` file. On the other PC, first install the `.cer` into **Local Machine > Trusted People**, then double click the `.msixbundle` (or `.msix`).
 
@@ -110,4 +110,4 @@ Raise the version (for example 1.0.1.0) in **Create App Packages**, build the ne
 
 ## Checked by CI
 
-Every push runs a job that builds the x64 MSIX exactly this way (msix-x64 profile, Native AOT), signs it with a throwaway test certificate, installs it on a clean Windows runner (as package `VisaryPDF_1.0.0.0_x64`) and starts it. The test package and its certificate are attached to the run as **VisaryPDF-x64-msix-test**.
+Every push runs a job that builds the x64 MSIX exactly this way (msix-x64 profile, Native AOT), signs it with a throwaway test certificate, installs it on a clean Windows runner (as package `VISHVPlus.VisaryPDF`) and starts it. The test package and its certificate are attached to the run as **VisaryPDF-x64-msix-test**.

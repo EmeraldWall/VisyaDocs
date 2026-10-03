@@ -7,15 +7,15 @@
 
   <!--
     MSIX package manifest (Visual Studio F5/Deploy, sideload packages, Microsoft Store).
-    Before the first Store upload, "Associate App with the Store" replaces Identity Name, Publisher and
-    PublisherDisplayName with the values Partner Center reserved for you.
+    Identity Name, Publisher and PublisherDisplayName are the values Partner Center reserved for
+    VisaryPDF (Product management > Product identity). The Store rejects packages with other values.
   -->
 
-  <Identity Name="VisaryPDF" Publisher="CN=VisaryPDF" Version="1.0.0.0" />
+  <Identity Name="VISHVPlus.VisaryPDF" Publisher="CN=65DD6B51-E5AD-470C-A620-4A4E40DE2F38" Version="1.0.0.0" />
 
   <Properties>
     <DisplayName>VisaryPDF</DisplayName>
-    <PublisherDisplayName>VisaryPDF</PublisherDisplayName>
+    <PublisherDisplayName>VISHVPlus</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
