@@ -114,10 +114,23 @@ jobs:
             -p:PackageCertificateKeyFile="$PWD/test.pfx" -p:PackageCertificatePassword=ci-test `
             -p:AppxPackageDir="$PWD/packages/"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $msix = Get-ChildItem packages -Recurse -Include *.msix | Select-Object -First 1
-          if (-not $msix) { Write-Error "No .msix was produced"; exit 1 }
+          # With images for several display scales the output is a bundle (app + per scale resources).
+          $msix = Get-ChildItem packages -Recurse -Include *.msixbundle, *.msix | Sort-Object { $_.Extension -ne '.msixbundle' } | Select-Object -First 1
+          if (-not $msix) { Write-Error "No .msix or .msixbundle was produced"; exit 1 }
           "MSIX: $($msix.Name), $([math]::Round($msix.Length / 1MB, 1)) MB" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
           "MSIX_PATH=$($msix.FullName)" >> $env:GITHUB_ENV
+
+      - name: Build the Store upload package (x64, as Visual Studio's Create App Packages does)
+        shell: pwsh
+        run: |
+          dotnet publish src/VisaryPDF.App -c Release -p:Platform=x64 -p:PublishProfile=msix-x64 `
+            -p:GenerateAppxPackageOnBuild=true -p:UapAppxPackageBuildMode=StoreUpload -p:AppxBundle=Always `
+            -p:AppxPackageSigningEnabled=true -p:PackageCertificateKeyFile="$PWD/test.pfx" -p:PackageCertificatePassword=ci-test `
+            -p:AppxPackageDir="$PWD/store/"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $upload = Get-ChildItem store -Recurse -Include *.msixupload | Select-Object -First 1
+          if (-not $upload) { Write-Error "No .msixupload was produced"; exit 1 }
+          "Store upload package: $($upload.Name), $([math]::Round($upload.Length / 1MB, 1)) MB" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
 
       - name: Install and start the package
         shell: pwsh
@@ -139,5 +152,6 @@ jobs:
           name: VisaryPDF-x64-msix-test
           path: |
             packages/**/*.msix
+            packages/**/*.msixbundle
             VisaryPDF-test.cer
           if-no-files-found: error

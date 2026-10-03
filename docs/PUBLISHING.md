@@ -38,7 +38,7 @@ To remove it later: Start menu, right click VisaryPDF, **Uninstall**.
 2. Choose **Sideloading**, keep **Enable automatic updates** off, **Next**.
 3. Signing: **Create...** a test certificate (publisher `CN=VisaryPDF`), **Next**.
 4. Select **x64** (and **ARM64** if wanted), Release, publish profile **msix-x64** / **msix-ARM64**, then **Create**.
-5. The output folder (`AppPackages`) contains `VisaryPDF.App_1.0.0.0_x64.msix` and a `.cer` file. On the other PC, first install the `.cer` into **Local Machine > Trusted People**, then double click the `.msix`.
+5. The output folder (`AppPackages`) contains the package (`VisaryPDF.App_1.0.0.0_x64.msixbundle`, or `.msix`) and a `.cer` file. On the other PC, first install the `.cer` into **Local Machine > Trusted People**, then double click the `.msixbundle` (or `.msix`).
 
 ---
 

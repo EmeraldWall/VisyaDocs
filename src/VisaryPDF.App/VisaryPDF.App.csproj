@@ -48,6 +48,12 @@
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.260803003" />
     <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="1.8.260803002" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <!--
+      MSIX packaging tools, pinned above the version the Windows App SDK brings in (1.7.20250829.1).
+      That version calls an undeclared task (WinAppSdkSignAppxPackageBundle) when it signs the image
+      resource packages of a Store upload, so Create App Packages failed in Visual Studio.
+    -->
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools.MSIX" Version="1.7.260930100" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
